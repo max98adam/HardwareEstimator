@@ -37,9 +37,11 @@ jobs:
         run: npm run build
         env:
           # Project Pages live at https://<user>.github.io/<repo>/, so all
-          # asset URLs must be prefixed with the repo name. Switch to "/" if
-          # you ever attach a custom apex domain via Settings → Pages.
-          VITE_BASE: /WeightRoom/
+          # asset URLs must be prefixed with the repo name. This fork is
+          # served from https://max98adam.github.io/HardwareEstimator/.
+          # Switch to "/" if you ever attach a custom apex domain via
+          # Settings → Pages.
+          VITE_BASE: /HardwareEstimator/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

@@ -1,9 +1,10 @@
 import { LuExternalLink } from "react-icons/lu";
-import { calcLLMRam, calcDisk, calcValueScore } from "@/lib/calculator";
+import { calcLLMRam, calcDisk, calcValueScore, getRamStatus } from "@/lib/calculator";
 import { resolveModel, getCalcOptions, getValueScoreInput } from "@/lib/calcInput";
 import { encodeState } from "@/lib/state";
 import { getShareBaseUrl } from "@/lib/url";
 import { KNOWN_MODELS } from "@/lib/models";
+import { APP_NAME } from "@/lib/constants";
 import type { CardData } from "@/lib/types";
 
 interface EmbedCardProps {
@@ -113,7 +114,7 @@ export function EmbedFallback() {
   return (
     <div className="w-full max-w-md mx-auto rounded-xl border border-dashed border-border bg-card text-card-foreground p-4 text-sm text-muted-foreground">
       No configuration provided. Append <code>?s=…</code> to this URL to render
-      a WeightRoom widget.
+      a {APP_NAME} widget.
     </div>
   );
 }
@@ -144,6 +145,17 @@ export function EmbedCard({ card }: EmbedCardProps) {
   const score = calcValueScore(getValueScoreInput(card, model));
   const tps = score?.tps ?? null;
 
+  // Mirror the main card: when (weights + KV) exceed the VRAM+RAM−OS pool the
+  // model can't be loaded, so throughput is meaningless and we suppress it.
+  const gpuCount = parseInt(card.hosting.gpuCount) || 0;
+  const gpuVram = parseFloat(card.hosting.gpuVram) || 0;
+  const ramNum = parseFloat(card.hosting.availableRam) || 0;
+  const availableMemoryGb =
+    gpuCount * gpuVram + ramNum - (card.hosting.osOverheadGb ?? 0);
+  const memoryExceeds =
+    availableMemoryGb > 0 &&
+    getRamStatus(ram.weightsGb + ram.kvCacheGb, availableMemoryGb) === "exceeds";
+
   const fullStateUrl = `${getShareBaseUrl()}?s=${encodeState({
     mode: "single",
     configs: [card],
@@ -162,8 +174,8 @@ export function EmbedCard({ card }: EmbedCardProps) {
         <Metric label="Storage" value={disk.totalGb.toString()} unit="GB" />
         <Metric
           label="TPS"
-          value={tps !== null ? formatTps(tps) : "—"}
-          unit={tps !== null ? "tok/s" : ""}
+          value={tps !== null && !memoryExceeds ? formatTps(tps) : "—"}
+          unit={tps !== null && !memoryExceeds ? "tok/s" : ""}
           accent
         />
       </div>
@@ -180,7 +192,7 @@ export function EmbedCard({ card }: EmbedCardProps) {
             alt=""
             className="w-3.5 h-3.5 rounded-sm"
           />
-          Powered by <span className="font-semibold">WeightRoom</span>
+          Powered by <span className="font-semibold">{APP_NAME}</span>
         </span>
         <span className="flex items-center gap-1">
           Open in calculator
@@ -188,12 +200,17 @@ export function EmbedCard({ card }: EmbedCardProps) {
         </span>
       </a>
 
-      {tps !== null && (
+      {memoryExceeds ? (
+        <div className="text-[10px] text-danger-foreground leading-snug">
+          Model exceeds available memory — it can't run on this hardware, so
+          throughput isn't shown.
+        </div>
+      ) : tps !== null ? (
         <div className="text-[10px] text-muted-foreground/70 leading-snug">
           TPS is a theoretical roof-line maximum (bandwidth-bound). Real
           throughput is typically 60–90% on dense single-GPU.
         </div>
-      )}
+      ) : null}
     </article>
   );
 }

@@ -6,11 +6,11 @@
   "description": "WeightRoom — estimate RAM, storage, and TPS for running LLMs locally or in the cloud",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/smelukov/WeightRoom.git"
+    "url": "git+https://github.com/max98adam/HardwareEstimator.git"
   },
-  "homepage": "https://github.com/smelukov/WeightRoom",
+  "homepage": "https://max98adam.github.io/HardwareEstimator/",
   "bugs": {
-    "url": "https://github.com/smelukov/WeightRoom/issues"
+    "url": "https://github.com/max98adam/HardwareEstimator/issues"
   },
   "license": "MIT",
   "scripts": {

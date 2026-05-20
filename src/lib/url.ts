@@ -13,7 +13,7 @@
  * fork — derives the base from `window.location` so the generated artefacts
  * always point at the host the user is actually looking at.
  */
-export const CANONICAL_BASE = "https://smelukov.github.io/WeightRoom/";
+export const CANONICAL_BASE = "https://max98adam.github.io/HardwareEstimator/";
 
 /**
  * Returns the base URL for share artefacts (iframe `src`, badge link target,
@@ -40,9 +40,9 @@ export function getShareBaseUrl(): string {
   if (protocol === "file:") return CANONICAL_BASE;
   // Strip the filename (if any) from pathname so we keep just the dir, then
   // ensure exactly one trailing slash. Examples:
-  //   "/"                → "/"
-  //   "/WeightRoom/"     → "/WeightRoom/"
-  //   "/calc/index.html" → "/calc/"
+  //   "/"                  → "/"
+  //   "/HardwareEstimator/" → "/HardwareEstimator/"
+  //   "/calc/index.html"   → "/calc/"
   const dir = pathname.replace(/[^/]*$/, "");
   return `${origin}${dir.endsWith("/") ? dir : `${dir}/`}`;
 }

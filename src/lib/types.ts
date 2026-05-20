@@ -12,11 +12,15 @@ export interface ModelCapabilities {
 
 export type ModelBrand =
   | "Google"
+  | "OpenAI"
   | "Alibaba"
   | "Meta"
   | "Mistral"
   | "Microsoft"
-  | "DeepSeek";
+  | "DeepSeek"
+  | "Moonshot"
+  | "Zhipu"
+  | "MiniMax";
 
 /**
  * Architecture parameters of a model.
@@ -55,6 +59,12 @@ export interface KnownModel extends ModelConfig {
   hfRepoId?: string | undefined;
   /** Optional capability flags for display in the selector and results. */
   capabilities?: ModelCapabilities | undefined;
+  /**
+   * Release date as ISO `YYYY-MM-DD`, taken from the HuggingFace repo's
+   * `createdAt` (the authoritative "released on HF" date). Populated in bulk
+   * from `MODEL_RELEASE_DATES` in models.ts.
+   */
+  releaseDate?: string | undefined;
 }
 
 export type QuantName =
@@ -80,7 +90,11 @@ export type QuantName =
   | "mlx_8bit"
   | "mlx_4bit"
   | "mlx_3bit"
-  | "mlx_2bit";
+  | "mlx_2bit"
+  // TurboQuant — KV-cache-only, data-free vector quantization
+  // (Google Research, arXiv:2504.19874). KV-quant options only.
+  | "turboquant_3_5"
+  | "turboquant_2_5";
 
 export interface CalcOptions {
   params: number;

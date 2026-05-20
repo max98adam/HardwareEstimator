@@ -18,6 +18,7 @@ import {
 } from "@/lib/calcInput";
 import { KNOWN_MODELS } from "@/lib/models";
 import type { CardData } from "@/lib/types";
+import { APP_NAME } from "@/lib/constants";
 
 export type ShieldTheme = "auto" | "light" | "dark";
 
@@ -25,7 +26,7 @@ export type ShieldTheme = "auto" | "light" | "dark";
 export type ShieldMetric = "tps" | "ram" | "summary";
 
 export interface ShieldOptions {
-  /** Left-hand label. Defaults to "WeightRoom". */
+  /** Left-hand label. Defaults to the app name. */
   label?: string;
   /** Which metric to surface in the value side. Defaults to "summary". */
   metric?: ShieldMetric;
@@ -154,7 +155,7 @@ export function renderShieldSvg(
   card: CardData,
   options: ShieldOptions = {},
 ): string {
-  const label = options.label ?? "WeightRoom";
+  const label = options.label ?? APP_NAME;
   const metric = options.metric ?? "summary";
   const theme = options.theme ?? "auto";
   const value = computeValueText(card, metric);

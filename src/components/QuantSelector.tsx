@@ -76,7 +76,9 @@ export function QuantSelector({
       <div className="space-y-2">
         <div className="flex items-center gap-1">
           <Label>KV Cache Quant</Label>
-          <InfoTooltip content="Quantization of the KV cache (attention memory). BF16 is the default — same precision as native training, no quality loss. Q8 halves KV memory with negligible quality loss. Q4 quarters it with small quality impact." />
+          <InfoTooltip content="Quantization of the KV cache (attention memory). BF16 is the default — same precision as native training, no quality loss. Q8 halves KV memory with negligible quality loss. Q4 quarters it with small quality impact.
+
+TurboQuant (Google Research, arXiv:2504.19874) is a data-free, sub-4-bit KV-cache vector quantization with near-lossless long-context recall — 3.5-bit is quality-neutral, 2.5-bit is aggressive. Experimental: research-grade tooling only, validated on standard/GQA attention. Benefit is unverified for MLA (DeepSeek V3/V4, Kimi K2) and multimodal models, and only the full-attention layers of hybrid/linear models gain." />
         </div>
         <Select value={kvQuant} onValueChange={(v) => onKvQuantChange(v as QuantName)}>
           <SelectTrigger data-testid="kv-quant-trigger" className="w-full">

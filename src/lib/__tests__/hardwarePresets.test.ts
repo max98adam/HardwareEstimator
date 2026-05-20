@@ -201,10 +201,15 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["h100-sxm", "3350"],
     ["h200", "4800"],
     ["b200", "8000"],
+    ["b300", "8000"],
     ["rtx-4090", "1008"],
     ["rtx-5090", "1792"],
+    ["rtx-pro-6000-blackwell", "1792"],
+    ["rtx-pro-6000-blackwell-server", "1597"],
+    ["rtx-pro-5000-blackwell", "1344"],
     ["mi300x", "5300"],
     ["mi325x", "6000"],
+    ["mi355x", "8000"],
   ];
 
   it.each(expected)(

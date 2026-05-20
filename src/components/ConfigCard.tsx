@@ -249,6 +249,16 @@ export const ConfigCard = memo(function ConfigCard({
           <CustomModelForm
             value={config.model.customModel}
             onChange={(customModel) => updateModel({ customModel })}
+            maxK={config.model.customMaxK ?? DEFAULT_MAX_K}
+            onMaxKChange={(customMaxK) =>
+              updateModel({
+                customMaxK,
+                // Lowering the max below the current context must pull the
+                // slider value down with it, or contextK would persist out of
+                // range in URL state (mirrors the HF-import clamp below).
+                contextK: Math.min(config.model.contextK, customMaxK),
+              })
+            }
             hfImportUrl={config.hfImportUrl ?? ""}
             onHfImportUrlChange={(hfImportUrl) => onChange({ ...config, hfImportUrl })}
             onImport={(

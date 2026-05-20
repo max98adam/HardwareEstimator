@@ -187,6 +187,9 @@ export const QUANT_BYTES: Record<string, number> = {
   mlx_4bit: 4.5 / 8,
   mlx_3bit: 3.5 / 8,
   mlx_2bit: 2.5 / 8,
+  // TurboQuant — KV-cache only; effective bits/element (mirrors QUANT_BITS).
+  turboquant_3_5: 3.5 / 8,
+  turboquant_2_5: 2.6 / 8,
 };
 
 /** Input for value score calculation. */

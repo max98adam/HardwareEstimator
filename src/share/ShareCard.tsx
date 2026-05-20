@@ -9,6 +9,7 @@ import {
 import { encodeState } from "@/lib/state";
 import { getShareBaseUrl } from "@/lib/url";
 import { KNOWN_MODELS } from "@/lib/models";
+import { APP_NAME } from "@/lib/constants";
 import type { CardData } from "@/lib/types";
 import type { ShareFormat } from "./formats";
 
@@ -262,7 +263,7 @@ function BrandRow({
       />
       <div style={{ display: "flex", flexDirection: "column" }}>
         <span style={{ fontSize, fontWeight: 700, letterSpacing: "-0.01em" }}>
-          {brandLabel ?? "WeightRoom"}
+          {brandLabel ?? APP_NAME}
         </span>
         {withTagline && (
           <span style={{ fontSize: fontSize * 0.45, color: palette.textMuted }}>
@@ -473,7 +474,7 @@ function CardBadgeLayout({
       <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 600, color: palette.textMuted, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-            {brandLabel ?? "WeightRoom"}
+            {brandLabel ?? APP_NAME}
           </span>
           <span style={{ fontSize: 11, color: palette.textMuted }}>
             {subtitle}

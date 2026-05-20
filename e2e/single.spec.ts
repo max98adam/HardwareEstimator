@@ -48,7 +48,7 @@ test.describe("Single-card mode", () => {
 
   test("shows heading and default model 'Qwen 3.6 27B' in selector", async ({ page }) => {
     await expect(
-      page.getByRole("heading", { name: /WeightRoom/i }),
+      page.getByRole("heading", { name: /LLM Inference Hardware Estimator/i }),
     ).toBeVisible();
 
     // The combobox trigger should show the default model name
