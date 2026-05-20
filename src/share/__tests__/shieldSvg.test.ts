@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { renderShieldSvg, shieldSvgToDataUrl } from "../shieldSvg";
+import { APP_NAME } from "@/lib/constants";
 import type { CardData } from "@/lib/types";
 
 /**
@@ -64,9 +65,9 @@ describe("renderShieldSvg", () => {
     expect(width).toBeLessThan(600);
   });
 
-  it("includes the default 'WeightRoom' label and renders a TPS / RAM summary", () => {
+  it("includes the default app-name label and renders a TPS / RAM summary", () => {
     const svg = renderShieldSvg(makeCard());
-    expect(svg).toContain(">WeightRoom<");
+    expect(svg).toContain(`>${APP_NAME}<`);
     // KNOWN_MODELS["qwen3.6-27b"] resolves to displayName "Qwen 3.6 27B"
     // today; if the catalog renames, this assertion will catch it before we
     // ship a badge with a stale name.

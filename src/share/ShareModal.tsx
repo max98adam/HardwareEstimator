@@ -25,6 +25,7 @@ import {
 } from "@/lib/screenshot";
 import { encodeState, encodeStateForEmbed } from "@/lib/state";
 import { getShareBaseUrl } from "@/lib/url";
+import { APP_NAME, APP_SLUG } from "@/lib/constants";
 import type { CardData } from "@/lib/types";
 import {
   SHARE_FORMATS,
@@ -242,7 +243,7 @@ function ImageTabBody({
   const handleDownload = async () => {
     const dataUrl = await renderShareCardToDataUrl(card, format, { includeQr, theme });
     const link = document.createElement("a");
-    link.download = `weightroom-${format.id}-${theme}.png`;
+    link.download = `${APP_SLUG}-${format.id}-${theme}.png`;
     link.href = dataUrl;
     link.click();
   };
@@ -367,7 +368,7 @@ function BadgeTabBody({
   const [fileFormat, setFileFormat] = useState<ShareFileFormat>(
     format.fileFormats[0] ?? "svg",
   );
-  const [labelOverride, setLabelOverride] = useState("WeightRoom");
+  const [labelOverride, setLabelOverride] = useState(APP_NAME);
   // Two independent theme states: shield supports "auto" (CSS currentColor),
   // while card-style is a baked PNG/SVG layout that can't adapt — only
   // Light/Dark make sense there. Keeping them separate avoids a confusing
@@ -389,14 +390,14 @@ function BadgeTabBody({
     const blob = new Blob([shieldSvgString], { type: "image/svg+xml" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.download = "weightroom-badge.svg";
+    link.download = `${APP_SLUG}-badge.svg`;
     link.href = url;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   const handleDownloadCard = async () => {
-    const filename = `weightroom-card-badge-${cardTheme}.${fileFormat}`;
+    const filename = `${APP_SLUG}-card-badge-${cardTheme}.${fileFormat}`;
     if (fileFormat === "svg") {
       const svg = await renderShareCardToSvg(card, format, {
         brandLabel: labelOverride,
@@ -423,7 +424,7 @@ function BadgeTabBody({
 
   const markdownSnippet = isShield
     ? `[![${labelOverride}](${shieldSvgToDataUrl(shieldSvgString)})](${getShareBaseUrl()}?s=${encodeState({ mode: "single", configs: [card] })})`
-    : `![WeightRoom](./assets/weightroom-card-badge.${fileFormat})`;
+    : `![${APP_NAME}](./assets/${APP_SLUG}-card-badge.${fileFormat})`;
 
   return (
     <div className="space-y-4">
@@ -463,7 +464,7 @@ function BadgeTabBody({
           id="badge-label"
           value={labelOverride}
           onChange={(e) => setLabelOverride(e.target.value)}
-          placeholder="WeightRoom"
+          placeholder={APP_NAME}
         />
       </div>
 
@@ -555,8 +556,8 @@ function BadgeTabBody({
       </div>
 
       <p className="text-[11px] text-muted-foreground/80 leading-snug">
-        Badges are a static snapshot of the current calculation. If
-        WeightRoom's formulas update later, this badge in your README will
+        Badges are a static snapshot of the current calculation. If the
+        calculator's formulas update later, this badge in your README will
         keep showing today's numbers (no live recalculation).
       </p>
     </div>
@@ -576,7 +577,7 @@ function EmbedTab({ configs }: { configs: CardData[] }) {
   const iframeSnippet = `<iframe
   src="${embedUrl}"
   width="100%" height="220" frameborder="0"
-  loading="lazy" title="WeightRoom widget"
+  loading="lazy" title="${APP_NAME} widget"
 ></iframe>`;
 
   return (
@@ -611,7 +612,7 @@ function EmbedTab({ configs }: { configs: CardData[] }) {
         <div className="rounded-lg border border-border bg-secondary/30 overflow-hidden">
           <iframe
             src={embedUrl}
-            title="WeightRoom embed preview"
+            title={`${APP_NAME} embed preview`}
             className="w-full h-[220px] border-0 bg-transparent"
             loading="lazy"
           />

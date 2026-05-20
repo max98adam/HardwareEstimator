@@ -223,6 +223,11 @@ export const QUANT_BITS: Record<QuantName, number> = {
   >),
   q8: 8,
   q4: 4,
+  // TurboQuant — KV-cache only. Effective bits per KV element including the
+  // per-vector FP16 norm overhead (arXiv:2504.19874): the "3.5-bit" setting
+  // is quality-neutral, the "2.5-bit" setting (~2.6 effective) is aggressive.
+  turboquant_3_5: 3.5,
+  turboquant_2_5: 2.6,
 };
 
 /**
@@ -279,4 +284,9 @@ export const KV_QUANTS: { value: QuantName; label: string }[] = [
   { value: "fp16", label: "FP16" },
   { value: "q8_0", label: "Q8_0 (half size)" },
   { value: "q4", label: "Q4 (quarter size)" },
+  // TurboQuant — data-free KV-cache vector quantization (arXiv:2504.19874).
+  // Sub-4-bit KV with near-lossless long-context recall. Experimental:
+  // research-grade tooling only, validated on standard/GQA attention.
+  { value: "turboquant_3_5", label: "TurboQuant 3.5-bit (KV, exp.)" },
+  { value: "turboquant_2_5", label: "TurboQuant 2.5-bit (KV, exp.)" },
 ];

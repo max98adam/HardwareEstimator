@@ -79,7 +79,7 @@ export const SHARE_FORMATS: readonly ShareFormat[] = [
   {
     id: "card-badge",
     label: "Card badge (600×140)",
-    description: "README hero block, recognisable WeightRoom branding",
+    description: "README hero block with the tool's branding",
     width: 600,
     height: 140,
     category: "readme",

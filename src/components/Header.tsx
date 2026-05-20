@@ -19,16 +19,14 @@ import {
   LuShare2,
   LuTrash2,
 } from "react-icons/lu";
-import { SiGithub } from "react-icons/si";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShareModal } from "@/share/ShareModal";
 import type { CardData } from "@/lib/types";
-
-const REPO_URL = "https://github.com/smelukov/WeightRoom";
+import { APP_NAME } from "@/lib/constants";
 
 /** Shared style for square icon-only header buttons. Centralised so all
- *  utility actions in the toolbar (Share, Screenshot, Clear, GitHub, theme)
+ *  utility actions in the toolbar (Share, Screenshot, Clear, theme)
  *  share the same hit-area, padding, hover treatment, and ARIA shape. */
 const ICON_BUTTON_CLASS =
   "flex items-center justify-center w-8 h-8 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-50";
@@ -72,13 +70,8 @@ export function Header({
 
   return (
     <header className="text-center py-8 px-4">
-      <h1 className="flex items-center justify-center gap-2.5 text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-        <img
-          src={`${import.meta.env.BASE_URL}logo.svg`}
-          alt=""
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-md"
-        />
-        WeightRoom
+      <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+        {APP_NAME}
       </h1>
       <p className="text-muted-foreground mt-2 text-sm sm:text-base">
         Estimate hardware requirements for local or cloud LLM deployment
@@ -197,23 +190,6 @@ export function Header({
             <TooltipContent>Clear all</TooltipContent>
           </Tooltip>
         )}
-
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <a
-                href={REPO_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="View source on GitHub"
-                className={ICON_BUTTON_CLASS}
-              >
-                <SiGithub className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              </a>
-            }
-          />
-          <TooltipContent>View source on GitHub</TooltipContent>
-        </Tooltip>
 
         <ThemeToggle />
       </div>

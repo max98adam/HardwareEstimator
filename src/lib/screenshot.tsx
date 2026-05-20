@@ -1,6 +1,7 @@
 import { toPng, toBlob, toSvg } from "html-to-image";
 import { createRoot, type Root } from "react-dom/client";
 import { ShareCard } from "@/share/ShareCard";
+import { APP_SLUG } from "@/lib/constants";
 import type { CardData } from "@/lib/types";
 import type { ShareFormat } from "@/share/formats";
 import type { ShareTheme } from "@/share/ShareCard";
@@ -101,7 +102,7 @@ export function buildCompareFilename(): string {
     String(date.getHours()).padStart(2, "0"),
     String(date.getMinutes()).padStart(2, "0"),
   ].join("");
-  return `weightroom-compare-${ts}.png`;
+  return `${APP_SLUG}-compare-${ts}.png`;
 }
 
 // ─── Share-card rendering (offscreen mount) ──────────────────────────────────

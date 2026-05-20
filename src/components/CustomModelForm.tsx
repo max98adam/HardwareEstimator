@@ -16,6 +16,9 @@ import type { ModelConfig, KvFormula, QuantName } from "@/lib/types";
 interface CustomModelFormProps {
   value: ModelConfig;
   onChange: (value: ModelConfig) => void;
+  /** Max context window in K tokens (drives the Context Length slider's range). */
+  maxK: number;
+  onMaxKChange: (maxK: number) => void;
   /** HuggingFace import field — controlled so it persists in URL state. */
   hfImportUrl: string;
   onHfImportUrlChange: (url: string) => void;
@@ -42,6 +45,8 @@ const FORMULA_OPTIONS: { value: KvFormula; label: string }[] = [
 export function CustomModelForm({
   value,
   onChange,
+  maxK,
+  onMaxKChange,
   hfImportUrl,
   onHfImportUrlChange,
   onImport,
@@ -162,8 +167,8 @@ export function CustomModelForm({
             className="h-8 text-sm"
           />
         </div>
-        {/* Common: Params + Layers */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Common: Params + Layers + Max Context */}
+        <div className="grid grid-cols-3 gap-3">
           <div className="space-y-1">
             <div className="flex items-center gap-1">
               <Label className="text-xs">Parameters</Label>
@@ -193,6 +198,25 @@ export function CustomModelForm({
               onChange={(e) => updateField("layers", e.target.value)}
               className="h-8 text-sm"
             />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-1">
+              <Label className="text-xs">Max Context</Label>
+              <InfoTooltip content="Maximum context window the model supports, in thousands of tokens (max_position_embeddings / 1024 in config.json). Sets the upper bound of the Context Length slider." />
+            </div>
+            <InputGroup>
+              <InputGroupInput
+                type="number"
+                min={1}
+                value={maxK}
+                onChange={(e) => {
+                  const num = parseInt(e.target.value, 10);
+                  if (!isNaN(num) && num >= 1) onMaxKChange(num);
+                }}
+                className="text-sm"
+              />
+              <InputGroupAddon align="inline-end">K</InputGroupAddon>
+            </InputGroup>
           </div>
         </div>
 

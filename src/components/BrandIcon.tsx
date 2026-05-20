@@ -39,31 +39,59 @@ function MicrosoftIcon({ size }: { size: number }) {
   );
 }
 
-// DeepSeek custom glyph. Also excluded from simple-icons (trademark);
-// rendered as a coloured rounded square with a "D" so the brand row
-// still has a visual cue alongside the others.
-function DeepSeekIcon({ size }: { size: number }) {
+// Coloured rounded-square monogram, used for brands that simple-icons
+// excludes (trademark) or doesn't ship a glyph for. Keeps every brand row
+// visually consistent without pulling in extra icon dependencies.
+function LetterIcon({
+  size,
+  label,
+  text,
+  bg,
+}: {
+  size: number;
+  label: string;
+  text: string;
+  bg: string;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" aria-label="DeepSeek">
-      <rect width="14" height="14" rx="3" fill="#4D6BFE" />
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none" aria-label={label}>
+      <rect width="14" height="14" rx="3" fill={bg} />
       <text
         x="7"
         y="10.5"
         textAnchor="middle"
-        fontSize="9"
+        fontSize={text.length > 1 ? 6 : 9}
         fontWeight="700"
         fill="white"
         fontFamily="sans-serif"
       >
-        D
+        {text}
       </text>
     </svg>
   );
 }
 
+// Brands rendered as a monogram square (no simple-icons glyph or trademark
+// restrictions). Colours approximate each vendor's brand palette.
+const LETTER_BRANDS: Partial<
+  Record<ModelBrand, { text: string; bg: string }>
+> = {
+  DeepSeek: { text: "D", bg: "#4D6BFE" },
+  OpenAI: { text: "AI", bg: "#10A37F" },
+  Moonshot: { text: "K", bg: "#16161A" },
+  Zhipu: { text: "Z", bg: "#3859FF" },
+  MiniMax: { text: "M", bg: "#E1341E" },
+};
+
 export function BrandIcon({ brand, size = 14 }: BrandIconProps) {
   if (brand === "Microsoft") return <MicrosoftIcon size={size} />;
-  if (brand === "DeepSeek") return <DeepSeekIcon size={size} />;
+
+  const letter = LETTER_BRANDS[brand];
+  if (letter) {
+    return (
+      <LetterIcon size={size} label={brand} text={letter.text} bg={letter.bg} />
+    );
+  }
 
   const Icon = BRAND_ICONS[brand];
   if (!Icon) return null;

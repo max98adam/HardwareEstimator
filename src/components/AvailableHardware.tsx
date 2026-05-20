@@ -170,6 +170,21 @@ function SpeedBlock({
   );
 }
 
+/**
+ * Shown in place of SpeedBlock when the model's weights + KV cache exceed the
+ * available memory pool. Throughput is meaningless if the model can't be
+ * loaded, so we suppress the tok/s figures and explain why instead.
+ */
+function ExceedsSpeedNote() {
+  return (
+    <div className="text-[10px] text-danger-foreground bg-secondary/30 rounded px-2 py-1.5">
+      ✗ Model exceeds available memory — it can't run on this hardware, so
+      throughput isn't estimated. Reduce the model size / quantization or add
+      memory.
+    </div>
+  );
+}
+
 function HardwarePresetSelect({
   activePreset,
   onPresetSelect,
@@ -352,6 +367,10 @@ export function AvailableHardware({
       ? gpuCount * gpuVram + ramNum
       : ramNum;
     const requiredGb = hasGPU ? modelMemoryGb : totalRamGb;
+    // When the model can't fit in memory it can't run, so throughput is moot.
+    const memoryExceeds =
+      totalAvailable > 0 &&
+      getRamStatus(requiredGb, totalAvailable) === "exceeds";
     return (
       <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border">
         {header}
@@ -438,9 +457,10 @@ export function AvailableHardware({
           </div>
         </div>
 
-        {tps != null && tps > 0 && (
+        {tps != null && tps > 0 && !memoryExceeds && (
           <SpeedBlock tps={tps} tpsSystem={tpsSystem} concurrentUsers={concurrentUsers} />
         )}
+        {tps != null && tps > 0 && memoryExceeds && <ExceedsSpeedNote />}
 
         {/* OS overhead */}
         <div className="space-y-1.5">
@@ -481,6 +501,11 @@ export function AvailableHardware({
   }
 
   // ── Full hosting layout ──────────────────────────────────────────────────
+  // Mirror the "Memory fits" FitsBar below: when (weights + KV) exceed the
+  // VRAM+RAM pool the model can't run, so we hide the throughput estimate.
+  const memoryExceeds =
+    totalAvailableMemory > 0 &&
+    getRamStatus(modelMemoryGb, totalAvailableMemory) === "exceeds";
   return (
     <div className="space-y-3 p-3 rounded-lg bg-muted/50 border border-border">
       {header}
@@ -663,7 +688,9 @@ export function AvailableHardware({
 
       {/* ── Speed ───────────────────────────────────────────────────────── */}
       {tps != null && tps > 0
-        ? <SpeedBlock tps={tps} tpsSystem={tpsSystem} concurrentUsers={concurrentUsers} />
+        ? (memoryExceeds
+            ? <ExceedsSpeedNote />
+            : <SpeedBlock tps={tps} tpsSystem={tpsSystem} concurrentUsers={concurrentUsers} />)
         : (
           <div className="text-[10px] text-muted-foreground bg-secondary/30 rounded px-2 py-1.5">
             💡 Fill in <strong>RAM BW (GB/s)</strong> for CPU/Apple Silicon, or <strong>GPU BW</strong> for GPU inference to see estimated speed. Common: M1/M2 Max ≈ 400, A100 ≈ 1555, H100 ≈ 3350, RTX 4090 ≈ 1008.

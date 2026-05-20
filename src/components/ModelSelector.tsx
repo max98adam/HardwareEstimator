@@ -42,6 +42,20 @@ function matchesWords(query: string, target: string): boolean {
   return words.every((w) => lower.includes(w));
 }
 
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** "2026-03-02" → "Mar 2026". Returns null for missing/invalid input. */
+function formatReleaseDate(iso?: string): string | null {
+  if (!iso) return null;
+  const [y, m] = iso.split("-");
+  const mi = Number(m) - 1;
+  if (!y || mi < 0 || mi > 11) return null;
+  return `${MONTHS[mi]} ${y}`;
+}
+
 interface ModelSelectorProps {
   value: string;
   onChange: (value: string) => void;
@@ -155,6 +169,11 @@ export function ModelSelector({ value, onChange, onHfUrl }: ModelSelectorProps) 
                           )}
                           <span className="flex-1">{model.displayName}</span>
                           <CapabilityBadges caps={model.capabilities} />
+                          {formatReleaseDate(model.releaseDate) && (
+                            <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">
+                              {formatReleaseDate(model.releaseDate)}
+                            </span>
+                          )}
                         </span>
                       </ComboboxItem>
                     )}

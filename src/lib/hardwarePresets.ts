@@ -31,6 +31,7 @@ export type HardwareCategory =
   | "apple_silicon_max"
   | "apple_silicon_ultra"
   | "nvidia_datacenter"
+  | "nvidia_workstation"
   | "nvidia_consumer"
   | "amd_datacenter";
 
@@ -39,6 +40,7 @@ export const HARDWARE_CATEGORY_LABELS: Record<HardwareCategory, string> = {
   apple_silicon_max: "Apple Silicon — Max",
   apple_silicon_ultra: "Apple Silicon — Ultra",
   nvidia_datacenter: "NVIDIA Data Center",
+  nvidia_workstation: "NVIDIA RTX PRO (Workstation)",
   nvidia_consumer: "NVIDIA Consumer",
   amd_datacenter: "AMD Instinct",
 };
@@ -136,7 +138,11 @@ function applePreset(args: {
  */
 function gpuPreset(args: {
   id: string;
-  category: "nvidia_datacenter" | "nvidia_consumer" | "amd_datacenter";
+  category:
+    | "nvidia_datacenter"
+    | "nvidia_workstation"
+    | "nvidia_consumer"
+    | "amd_datacenter";
   label: string;
   /** GPU model identifier as printed on the box (used for `gpuInfo`). */
   gpuInfo: string;
@@ -300,6 +306,48 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 8000,
     memoryType: "HBM3e",
   }),
+  gpuPreset({
+    id: "b300",
+    category: "nvidia_datacenter",
+    label: "NVIDIA B300 288GB (Blackwell Ultra)",
+    gpuInfo: "B300 288GB",
+    vramGb: 288,
+    bandwidthGBs: 8000,
+    memoryType: "HBM3e",
+  }),
+
+  // ── NVIDIA RTX PRO (Workstation) ──────────────────────────────────────
+  // RTX PRO 6000 Blackwell family — all three editions share 96 GB GDDR7
+  // on the same GB202 silicon, but the Server Edition runs slower memory
+  // (1597 vs 1792 GB/s), so it is a distinct preset. The 96 GB single-card
+  // capacity makes these the go-to workstation cards for local LLMs.
+  gpuPreset({
+    id: "rtx-pro-6000-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 6000 Blackwell (Workstation)",
+    gpuInfo: "RTX PRO 6000 Blackwell 96GB",
+    vramGb: 96,
+    bandwidthGBs: 1792,
+    memoryType: "GDDR7",
+  }),
+  gpuPreset({
+    id: "rtx-pro-6000-blackwell-server",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 6000 Blackwell (Server Ed.)",
+    gpuInfo: "RTX PRO 6000 Blackwell Server 96GB",
+    vramGb: 96,
+    bandwidthGBs: 1597,
+    memoryType: "GDDR7",
+  }),
+  gpuPreset({
+    id: "rtx-pro-5000-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 5000 Blackwell 48GB",
+    gpuInfo: "RTX PRO 5000 Blackwell 48GB",
+    vramGb: 48,
+    bandwidthGBs: 1344,
+    memoryType: "GDDR7",
+  }),
 
   // ── NVIDIA Consumer ───────────────────────────────────────────────────
   gpuPreset({
@@ -347,6 +395,15 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     gpuInfo: "MI325X 256GB",
     vramGb: 256,
     bandwidthGBs: 6000,
+    memoryType: "HBM3e",
+  }),
+  gpuPreset({
+    id: "mi355x",
+    category: "amd_datacenter",
+    label: "AMD Instinct MI355X (CDNA4)",
+    gpuInfo: "MI355X 288GB",
+    vramGb: 288,
+    bandwidthGBs: 8000,
     memoryType: "HBM3e",
   }),
 ];
