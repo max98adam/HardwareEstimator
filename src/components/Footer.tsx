@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LuChevronDown } from "react-icons/lu";
 import { KV_FORMULA_DETAILS } from "@/lib/kvFormulas";
+import { LAST_UPDATED } from "@/lib/constants";
 
 // NOTE: When you change a formula in src/lib/calculator.ts, update the
 // matching FormulaBlock / FormulaCard below. The footer is the only place
@@ -300,6 +301,19 @@ export function Footer() {
             </div>
           </div>
         </div>
+
+        <p className="pb-3 text-center text-[10px] text-muted-foreground/70">
+          Forked from{" "}
+          <a
+            href="https://github.com/smelukov/WeightRoom"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            WeightRoom
+          </a>{" "}
+          by smelukov · Last updated by Claude on {LAST_UPDATED}
+        </p>
       </div>
     </footer>
   );
