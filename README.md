@@ -8,6 +8,8 @@ A web calculator that estimates RAM, storage, and token throughput (TPS) for run
 
 This fork extends the original with the latest open-weight models (gpt-oss, Llama 4, Qwen 3-Next, DeepSeek V3.2 / V4, Kimi K2, GLM-4.x, MiniMax) and inference hardware (NVIDIA RTX PRO 6000 Blackwell, B300, AMD MI355X, …).
 
+_Last updated by Claude on 2026-05-20._ The model & hardware catalog is refreshed by a scheduled Claude Code routine — see [CLAUDE.md](./CLAUDE.md).
+
 ## Develop
 
 ```bash
