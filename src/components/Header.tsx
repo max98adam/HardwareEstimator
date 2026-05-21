@@ -23,7 +23,7 @@ import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { ShareModal } from "@/share/ShareModal";
 import type { CardData } from "@/lib/types";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, LAST_UPDATED } from "@/lib/constants";
 
 /** Shared style for square icon-only header buttons. Centralised so all
  *  utility actions in the toolbar (Share, Screenshot, Clear, theme)
@@ -75,6 +75,18 @@ export function Header({
       </h1>
       <p className="text-muted-foreground mt-2 text-sm sm:text-base">
         Estimate hardware requirements for local or cloud LLM deployment
+      </p>
+      <p className="mt-1.5 text-[11px] text-muted-foreground/70">
+        Forked from{" "}
+        <a
+          href="https://github.com/smelukov/WeightRoom"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-foreground"
+        >
+          WeightRoom
+        </a>{" "}
+        by smelukov · Last updated by Claude on {LAST_UPDATED}
       </p>
       <div className="mt-4 flex items-center justify-center gap-2">
         <div className="inline-flex rounded-lg bg-secondary p-1 gap-1">
