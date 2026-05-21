@@ -20,7 +20,9 @@ export type ModelBrand =
   | "DeepSeek"
   | "Moonshot"
   | "Zhipu"
-  | "MiniMax";
+  | "MiniMax"
+  | "IBM"
+  | "Cohere";
 
 /**
  * Architecture parameters of a model.
