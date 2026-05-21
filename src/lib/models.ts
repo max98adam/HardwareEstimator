@@ -15,6 +15,8 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Moonshot", label: "Moonshot AI" },
   { key: "Zhipu", label: "Z.ai (Zhipu)" },
   { key: "MiniMax", label: "MiniMax" },
+  { key: "IBM", label: "IBM Granite" },
+  { key: "Cohere", label: "Cohere" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -473,6 +475,22 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 32,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  "mistral-medium-3.5": {
+    // Mistral Medium 3.5: dense 128B multimodal flagship (mistral3 /
+    // Mistral3ForConditionalGeneration wrapper → VLM). Plain GQA, no sliding
+    // window. 88 layers, kvHeads=8, headDim=128, 256K context. "Dense 128B"
+    // per the model card.
+    displayName: "Mistral Medium 3.5 128B",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Mistral-Medium-3.5-128B",
+    params: 128e9,
+    layers: 88,
+    kvHeads: 8,
+    headDim: 128,
+    moe: false,
+    maxContextK: 256,
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
   "mixtral-8x7b": {
     displayName: "Mixtral 8x7B-A13B (MoE)",
     brand: "Mistral",
@@ -788,6 +806,29 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 198,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // GLM-5.1 (model_type glm_moe_dsa): the GLM-5 generation moves to MLA
+  // latent attention (kv_lora_rank=512, qk_rope_head_dim=64) plus DeepSeek-
+  // style sparse attention (DSA, index_topk=2048). Same MLA cache layout as
+  // DeepSeek V3.2 / Kimi, so we model it as `mla` (a safe upper bound on KV —
+  // the DSA sparsity only shrinks it further at long context). 78 layers,
+  // 256 routed experts + 1 shared, 8 active. Total/active params are computed
+  // from config (≈743B transformer-proper, ≈41B active) — not in the card.
+  "glm-5.1": {
+    displayName: "GLM-5.1 743B-A41B (MoE)",
+    brand: "Zhipu",
+    hfRepoId: "zai-org/GLM-5.1",
+    params: 743e9,
+    activeParams: 41e9,
+    layers: 78,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 198, // max_position_embeddings 202752 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // ── MiniMax ───────────────────────────────────────────────────────
   "minimax-m1": {
     // MiniMax-M1: 456B-A45.9B reasoning model with hybrid "lightning"
@@ -840,6 +881,72 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 192,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  "minimax-m2.7": {
+    // MiniMax-M2.7: same minimax_m2 full-GQA core as M2/M2.5 (62 layers,
+    // kvHeads=8, headDim=128, 230B-A10B). Context extended to 200K
+    // (max_position_embeddings 204800 / 1024).
+    displayName: "MiniMax-M2.7 230B-A10B (MoE)",
+    brand: "MiniMax",
+    hfRepoId: "MiniMaxAI/MiniMax-M2.7",
+    params: 230e9,
+    activeParams: 10e9,
+    layers: 62,
+    kvHeads: 8,
+    headDim: 128,
+    moe: true,
+    maxContextK: 200,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  // ── IBM Granite (standard GQA) ────────────────────────────────────
+  // Granite 4.1 dense transformers (model_type granite / GraniteForCausalLM):
+  // plain GQA, kvHeads=8, headDim=128 (hidden 4096 / 32 heads), 128K context.
+  "granite-4.1-8b": {
+    displayName: "Granite 4.1 8B",
+    brand: "IBM",
+    hfRepoId: "ibm-granite/granite-4.1-8b",
+    params: 8.8e9,
+    layers: 40,
+    kvHeads: 8,
+    headDim: 128,
+    moe: false,
+    maxContextK: 128,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  "granite-4.1-30b": {
+    displayName: "Granite 4.1 30B",
+    brand: "IBM",
+    hfRepoId: "ibm-granite/granite-4.1-30b",
+    params: 28.9e9,
+    layers: 64,
+    kvHeads: 8,
+    headDim: 128,
+    moe: false,
+    maxContextK: 128,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // ── Cohere (hybrid sliding-window MoE, VLM) ───────────────────────
+  // Command A+ (05-2026, model_type cohere2_moe inside cohere2_vision):
+  // sliding-window/full mix — 24 sliding (window=4096) + 8 full layers of 32,
+  // so we model it `hybrid` with fullLayers=8, slidingWindow=4096. 128 experts
+  // (8 active), kvHeads=8, headDim=128. 218B total / 25B active and a 128K
+  // window per the model card (config's max_position_embeddings 5M is the rope
+  // ceiling, not the supported context). Apache-2.0, multimodal.
+  "command-a-plus-2026": {
+    displayName: "Command A+ 218B-A25B (MoE)",
+    brand: "Cohere",
+    hfRepoId: "CohereLabs/command-a-plus-05-2026-bf16",
+    params: 218e9,
+    activeParams: 25e9,
+    layers: 32,
+    kvHeads: 8,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 8,
+    slidingWindow: 4096,
+    moe: true,
+    maxContextK: 128,
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
 };
 
 /**
@@ -847,7 +954,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-05-20.
+ * Fetched 2026-05-21.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -880,6 +987,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mistral-nemo-12b": "2024-07-17",
   "mistral-7b": "2023-09-20",
   "mistral-small-24b": "2025-01-28",
+  "mistral-medium-3.5": "2026-03-31",
   "mixtral-8x7b": "2023-12-01",
   "mixtral-8x22b": "2024-04-16",
   "phi-3.5-mini": "2024-08-16",
@@ -900,9 +1008,14 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "glm-4.5-air": "2025-07-20",
   "glm-4.6": "2025-09-29",
   "glm-4.7": "2025-12-22",
+  "glm-5.1": "2026-04-03",
   "minimax-m1": "2025-06-13",
   "minimax-m2": "2025-10-22",
   "minimax-m2.5": "2026-02-12",
+  "minimax-m2.7": "2026-04-09",
+  "granite-4.1-8b": "2026-04-06",
+  "granite-4.1-30b": "2026-04-06",
+  "command-a-plus-2026": "2026-05-11",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel

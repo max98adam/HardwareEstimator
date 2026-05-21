@@ -81,6 +81,8 @@ const LETTER_BRANDS: Partial<
   Moonshot: { text: "K", bg: "#16161A" },
   Zhipu: { text: "Z", bg: "#3859FF" },
   MiniMax: { text: "M", bg: "#E1341E" },
+  IBM: { text: "IBM", bg: "#0F62FE" },
+  Cohere: { text: "Co", bg: "#FF7759" },
 };
 
 export function BrandIcon({ brand, size = 14 }: BrandIconProps) {
