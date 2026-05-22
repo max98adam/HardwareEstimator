@@ -59,6 +59,13 @@ export interface KnownModel extends ModelConfig {
   brand: ModelBrand;
   /** HuggingFace repo ID, e.g. "meta-llama/Llama-3.1-8B". */
   hfRepoId?: string | undefined;
+  /**
+   * HuggingFace repo of a real NVFP4 build of this model, when one exists.
+   * Presence gates the NVFP4 weights-quant option in the selector — we only
+   * offer NVFP4 for models that actually ship an NVFP4 checkpoint. Populated
+   * in bulk from `MODEL_NVFP4_REPOS` in models.ts.
+   */
+  nvfp4RepoId?: string | undefined;
   /** Optional capability flags for display in the selector and results. */
   capabilities?: ModelCapabilities | undefined;
   /**
@@ -88,6 +95,9 @@ export type QuantName =
   | "gptq_3bit"
   // AWQ family — activation-aware PTQ for GPU inference (vLLM / AutoAWQ)
   | "awq_4bit"
+  // NVFP4 — NVIDIA 4-bit float microscaling (Blackwell; vLLM / TensorRT-LLM).
+  // Only offered for models that ship a real NVFP4 build (see MODEL_NVFP4_REPOS).
+  | "nvfp4"
   // MLX family — Apple Silicon native quantization (mlx_lm.convert)
   | "mlx_8bit"
   | "mlx_4bit"

@@ -5,7 +5,7 @@ import type { QuantName } from "./types";
  * runtime ecosystem. Used both for grouping in the UI selector and for
  * filtering compatible inference engines (see QUANT_FAMILY_ENGINES).
  */
-export type QuantFamily = "float" | "gguf" | "gptq" | "awq" | "mlx";
+export type QuantFamily = "float" | "gguf" | "gptq" | "awq" | "mlx" | "nvfp4";
 
 /**
  * Single source of truth for everything we know about a quantization format:
@@ -184,6 +184,18 @@ export const QUANT_SPECS: QuantSpec[] = [
     family: "awq",
     familyLabel: "AWQ (vLLM / AutoAWQ, GPU)",
   },
+
+  // ─── NVFP4 (NVIDIA 4-bit float microscaling — Blackwell, vLLM / TensorRT) ─
+  // E2M1 4-bit elements + per-block (16) E4M3 FP8 scale (8/16 = 0.5 bpw) +
+  // a negligible per-tensor FP32 scale → 4.5 bpw effective. Only shown for
+  // models with a real NVFP4 build on HF (gated per-model via nvfp4RepoId).
+  {
+    value: "nvfp4",
+    label: "NVFP4 (4-bit)",
+    bpw: 4.5,
+    family: "nvfp4",
+    familyLabel: "NVFP4 (NVIDIA Blackwell — vLLM / TensorRT-LLM)",
+  },
 ];
 
 /**
@@ -203,6 +215,8 @@ export const QUANT_FAMILY_ENGINES: Record<QuantFamily, ReadonlySet<string>> = {
   mlx: new Set(["llamacpp", "custom"]),
   gptq: new Set(["vllm", "tensorrt", "custom"]),
   awq: new Set(["vllm", "tensorrt", "custom"]),
+  // NVFP4 is a Blackwell GPU format — same engine support as GPTQ/AWQ.
+  nvfp4: new Set(["vllm", "tensorrt", "custom"]),
 };
 
 /**

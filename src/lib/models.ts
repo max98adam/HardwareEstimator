@@ -491,6 +491,47 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
+  // Mistral Large 3: the open flagship is a DeepSeek-V3-architecture MLA MoE
+  // (model_type deepseek_v3): 61 layers, kv_lora_rank=512, qk_rope_head_dim=64,
+  // 256 → here 128 routed experts (4 active) + 1 shared ≈ 41B active of 675B.
+  // Modeled as `mla` like DeepSeek V3. Gated repo — arch verified against the
+  // faithful FriendliAI BF16 mirror (max_position_embeddings 294912 → 288K).
+  "mistral-large-3": {
+    displayName: "Mistral Large 3 675B-A41B (MoE)",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Mistral-Large-3-675B-Instruct-2512",
+    params: 675e9,
+    activeParams: 41e9,
+    layers: 61,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 288,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // Mistral Small 4: new `mistral4` arch (Mistral3ForConditionalGeneration →
+  // VLM). MLA latent attention with a smaller rank — kv_lora_rank=256,
+  // qk_rope_head_dim=64 — so it's modeled as `mla`. 36 layers, 128 routed
+  // experts (4 active) + 1 shared ≈ 7B active of 119.4B total. 1M context.
+  "mistral-small-4": {
+    displayName: "Mistral Small 4 119B-A7B (MoE)",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Mistral-Small-4-119B-2603",
+    params: 119e9,
+    activeParams: 7e9,
+    layers: 36,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 256,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
   "mixtral-8x7b": {
     displayName: "Mixtral 8x7B-A13B (MoE)",
     brand: "Mistral",
@@ -988,6 +1029,8 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mistral-7b": "2023-09-20",
   "mistral-small-24b": "2025-01-28",
   "mistral-medium-3.5": "2026-03-31",
+  "mistral-large-3": "2025-11-28",
+  "mistral-small-4": "2026-01-23",
   "mixtral-8x7b": "2023-12-01",
   "mixtral-8x22b": "2024-04-16",
   "phi-3.5-mini": "2024-08-16",
@@ -1018,12 +1061,59 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "command-a-plus-2026": "2026-05-11",
 };
 
+/**
+ * Models that ship a real NVFP4 (NVIDIA 4-bit float) build on HuggingFace,
+ * mapped to a representative NVFP4 repo. Presence of an entry is what unlocks
+ * the NVFP4 option in the weights-quant selector — we only offer NVFP4 for a
+ * model when an NVFP4 checkpoint of that model actually exists on the Hub.
+ *
+ * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
+ * and verified to exist via `https://huggingface.co/api/models/<repo>`.
+ * Re-verify on each catalog refresh; drop entries whose repo disappears.
+ * Fetched 2026-05-22.
+ */
+export const MODEL_NVFP4_REPOS: Record<string, string> = {
+  "gemma4-26b-a4b": "RedHatAI/gemma-4-26B-A4B-it-NVFP4",
+  "gemma4-31b": "RedHatAI/gemma-4-31B-it-NVFP4",
+  "qwen3.5-9b": "AxionML/Qwen3.5-9B-NVFP4",
+  "qwen3.6-27b": "sakamakismile/Qwen3.6-27B-Text-NVFP4-MTP",
+  "qwen3.6-35b-a3b": "RedHatAI/Qwen3.6-35B-A3B-NVFP4",
+  "qwen3-8b": "RedHatAI/Qwen3-8B-NVFP4",
+  "qwen3-32b": "RedHatAI/Qwen3-32B-NVFP4",
+  "qwen3-235b-a22b": "RedHatAI/Qwen3-235B-A22B-NVFP4",
+  "qwen3-next-80b-a3b": "RedHatAI/Qwen3-Next-80B-A3B-Instruct-NVFP4",
+  "qwen3-coder-480b": "NVFP4/Qwen3-Coder-480B-A35B-Instruct-FP4",
+  "llama3.1-8b": "RedHatAI/Llama-3.1-8B-Instruct-NVFP4",
+  "llama3.3-70b": "RedHatAI/Llama-3.3-70B-Instruct-NVFP4",
+  "llama4-scout": "RedHatAI/Llama-4-Scout-17B-16E-Instruct-NVFP4",
+  "llama4-maverick": "RedHatAI/Llama-4-Maverick-17B-128E-Instruct-NVFP4",
+  "mistral-medium-3.5": "RecViking/Mistral-Medium-3.5-128B-NVFP4",
+  "mistral-large-3": "mistralai/Mistral-Large-3-675B-Instruct-2512-NVFP4",
+  "mistral-small-4": "mistralai/Mistral-Small-4-119B-2603-NVFP4",
+  "deepseek-r1-distill-32b": "nm-testing/DeepSeek-R1-Distill-Qwen-32B-NVFP4",
+  "deepseek-r1": "RedHatAI/DeepSeek-R1-NVFP4-FP8-BLOCK",
+  "deepseek-v3.2": "RedHatAI/DeepSeek-V3.2-NVFP4-FP8-BLOCK",
+  "deepseek-v4-flash": "RedHatAI/DeepSeek-V4-Flash-NVFP4-FP8",
+  "kimi-k2-thinking": "Abduali/Kimi-K2-Thinking-NVFP4",
+  "kimi-linear-48b": "Firworks/Kimi-Linear-48B-A3B-Instruct-nvfp4",
+  "kimi-k2.6": "RedHatAI/Kimi-K2.6-NVFP4",
+  "glm-4.5-air": "OnFinanceAI/GLM-4.5-Air-FP4",
+  "glm-4.6": "RedHatAI/GLM-4.6-NVFP4",
+  "glm-5.1": "nvidia/GLM-5.1-NVFP4",
+  "minimax-m2.5": "RedHatAI/MiniMax-M2.5-NVFP4",
+  "minimax-m2.7": "nvidia/MiniMax-M2.7-NVFP4",
+};
+
 // Enrich the catalog once at module load so every consumer of KnownModel
-// (selector, result card, …) sees `releaseDate`. Runs before the model-group
-// singleton below, which copies the field onto each ModelOption.
+// (selector, result card, …) sees `releaseDate` and `nvfp4RepoId`. Runs before
+// the model-group singleton below, which copies fields onto each ModelOption.
 for (const [key, date] of Object.entries(MODEL_RELEASE_DATES)) {
   const model = KNOWN_MODELS[key];
   if (model) model.releaseDate = date;
+}
+for (const [key, repo] of Object.entries(MODEL_NVFP4_REPOS)) {
+  const model = KNOWN_MODELS[key];
+  if (model) model.nvfp4RepoId = repo;
 }
 
 export function getModelsByBrand(): {
