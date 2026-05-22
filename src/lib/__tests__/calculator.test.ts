@@ -11,7 +11,7 @@ import {
   getValueColor,
   QUANT_BYTES,
 } from "../calculator";
-import { QUANT_BITS } from "../quants";
+import { QUANT_BITS, getQuantFamily, QUANT_FAMILY_ENGINES } from "../quants";
 import type { QuantName } from "../types";
 
 // ─── calcLLMRam ──────────────────────────────────────────────────────────────
@@ -1264,6 +1264,19 @@ describe("Quant families — bits/bytes invariants", () => {
     expect(QUANT_BITS.mlx_4bit - 4).toBe(0.5);
     expect(QUANT_BITS.mlx_3bit - 3).toBe(0.5);
     expect(QUANT_BITS.mlx_2bit - 2).toBe(0.5);
+  });
+
+  // NVFP4: 4-bit E2M1 + an E4M3 FP8 scale per block of 16 = 4 + 8/16 = 4.5 bpw.
+  // It is a Blackwell GPU format, so it shares GPTQ/AWQ's engine compatibility.
+  it("NVFP4 is 4.5 bpw and a GPU-only family (vLLM / TensorRT)", () => {
+    expect(QUANT_BITS.nvfp4).toBe(4.5);
+    expect(QUANT_BYTES.nvfp4).toBeCloseTo(4.5 / 8, 6);
+    expect(getQuantFamily("nvfp4")).toBe("nvfp4");
+    const engines = QUANT_FAMILY_ENGINES.nvfp4;
+    expect(engines.has("vllm")).toBe(true);
+    expect(engines.has("tensorrt")).toBe(true);
+    expect(engines.has("custom")).toBe(true);
+    expect(engines.has("llamacpp")).toBe(false);
   });
 });
 
