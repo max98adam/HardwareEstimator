@@ -14,4 +14,4 @@ export const APP_SLUG = "llm-hardware-estimator";
  * Shown in the footer and README. The scheduled "Update models and hardware"
  * routine bumps this whenever it refreshes the catalog.
  */
-export const LAST_UPDATED = "2026-05-21";
+export const LAST_UPDATED = "2026-05-25";
