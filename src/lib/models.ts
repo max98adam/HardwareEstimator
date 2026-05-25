@@ -491,6 +491,63 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
+  // ── Mistral MLA generation (Large 3 / Small 4 — latent attention MoE) ──
+  // Mistral Large 3 and Small 4 move to DeepSeek-style MLA latent attention
+  // (kv_lora_rank + qk_rope_head_dim) on top of a fine-grained MoE, and both
+  // ship a Pixtral vision encoder → VLM. Mistral Large 3 has no HuggingFace
+  // config.json — it is a Mistral-format repo, so its architecture is verified
+  // against params.json (n_layers 61, kv_lora_rank 512, qk_rope_head_dim 64,
+  // 128 experts / 4 active + 1 shared). Total 675B from the repo name; active
+  // ≈40B and Small 4's active ≈6.6B are computed from the config layout.
+  "mistral-large-3": {
+    displayName: "Mistral Large 3 675B-A40B (MoE)",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Mistral-Large-3-675B-Instruct-2512",
+    params: 675e9,
+    activeParams: 40e9,
+    layers: 61,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 288, // params.json max_position_embeddings 294912 / 1024
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
+  "mistral-small-4": {
+    // mistral4 text core (kv_lora_rank=256, qk_rope_head_dim=64) inside a
+    // Mistral3ForConditionalGeneration VLM wrapper. 36 layers, 128 experts /
+    // 4 active + 1 shared (≈6.6B active), native 1M context (YaRN).
+    displayName: "Mistral Small 4 119B-A6.6B (MoE)",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Mistral-Small-4-119B-2603",
+    params: 119e9,
+    activeParams: 6.6e9,
+    layers: 36,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 256, // smaller MLA latent than DeepSeek/GLM (512)
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
+  "devstral-2-123b": {
+    // Devstral 2: dense agentic-coding model (model_type ministral3, plain
+    // GQA). 88 layers, kvHeads=8, headDim=128, 256K context, no vision.
+    displayName: "Devstral 2 123B",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Devstral-2-123B-Instruct-2512",
+    params: 123e9,
+    layers: 88,
+    kvHeads: 8,
+    headDim: 128,
+    moe: false,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
   "mixtral-8x7b": {
     displayName: "Mixtral 8x7B-A13B (MoE)",
     brand: "Mistral",
@@ -792,6 +849,26 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 198, // max_position_embeddings 202752 / 1024
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // GLM-4.7-Flash (model_type glm4_moe_lite): the lightweight GLM tier moves
+  // to MLA latent attention (kv_lora_rank=512, qk_rope_head_dim=64), unlike the
+  // full GLM-4.5/4.6/4.7 which stay on plain GQA. 47 layers, 64 routed experts
+  // + 1 shared (4 active). Total ≈30B / active ≈4B computed from config.
+  "glm-4.7-flash": {
+    displayName: "GLM-4.7-Flash 30B-A4B (MoE)",
+    brand: "Zhipu",
+    hfRepoId: "zai-org/GLM-4.7-Flash",
+    params: 30e9,
+    activeParams: 3.9e9,
+    layers: 47,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 198, // max_position_embeddings 202752 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   "glm-4.7": {
     // Current GLM flagship — same 92-layer GQA core as 4.6, longer context.
     displayName: "GLM-4.7 355B-A32B (MoE)",
@@ -954,7 +1031,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-05-21.
+ * Fetched 2026-05-25.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -988,6 +1065,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mistral-7b": "2023-09-20",
   "mistral-small-24b": "2025-01-28",
   "mistral-medium-3.5": "2026-03-31",
+  "mistral-large-3": "2025-11-28",
+  "mistral-small-4": "2026-01-23",
+  "devstral-2-123b": "2025-11-28",
   "mixtral-8x7b": "2023-12-01",
   "mixtral-8x22b": "2024-04-16",
   "phi-3.5-mini": "2024-08-16",
@@ -1007,6 +1087,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "kimi-k2.6": "2026-04-14",
   "glm-4.5-air": "2025-07-20",
   "glm-4.6": "2025-09-29",
+  "glm-4.7-flash": "2026-01-19",
   "glm-4.7": "2025-12-22",
   "glm-5.1": "2026-04-03",
   "minimax-m1": "2025-06-13",
