@@ -83,6 +83,8 @@ const LETTER_BRANDS: Partial<
   MiniMax: { text: "M", bg: "#E1341E" },
   IBM: { text: "IBM", bg: "#0F62FE" },
   Cohere: { text: "Co", bg: "#FF7759" },
+  InclusionAI: { text: "iA", bg: "#1677FF" },
+  Xiaomi: { text: "Mi", bg: "#FF6900" },
 };
 
 export function BrandIcon({ brand, size = 14 }: BrandIconProps) {

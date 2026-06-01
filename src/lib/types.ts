@@ -22,7 +22,9 @@ export type ModelBrand =
   | "Zhipu"
   | "MiniMax"
   | "IBM"
-  | "Cohere";
+  | "Cohere"
+  | "InclusionAI"
+  | "Xiaomi";
 
 /**
  * Architecture parameters of a model.

@@ -17,6 +17,8 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "MiniMax", label: "MiniMax" },
   { key: "IBM", label: "IBM Granite" },
   { key: "Cohere", label: "Cohere" },
+  { key: "InclusionAI", label: "InclusionAI (Ant Group)" },
+  { key: "Xiaomi", label: "Xiaomi MiMo" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -969,9 +971,9 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
   // Command A+ (05-2026, model_type cohere2_moe inside cohere2_vision):
   // sliding-window/full mix — 24 sliding (window=4096) + 8 full layers of 32,
   // so we model it `hybrid` with fullLayers=8, slidingWindow=4096. 128 experts
-  // (8 active), kvHeads=8, headDim=128. 218B total / 25B active and a 128K
-  // window per the model card (config's max_position_embeddings 5M is the rope
-  // ceiling, not the supported context). Apache-2.0, multimodal.
+  // (8 active, 4 shared), kvHeads=8, headDim=128. 218B total / 25B active and
+  // a 200K native context window (max_position_embeddings 200000 / 1024 ≈ 195).
+  // Apache-2.0, multimodal.
   "command-a-plus-2026": {
     displayName: "Command A+ 218B-A25B (MoE)",
     brand: "Cohere",
@@ -985,8 +987,82 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     fullLayers: 8,
     slidingWindow: 4096,
     moe: true,
-    maxContextK: 128,
+    maxContextK: 195,
     capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
+  // ── InclusionAI (Ant Group) — Ling/Ring (MLA, bailing_hybrid) ─────
+  // Ant Group's open-source MoE series. Both Ring (thinking) and Ling
+  // (non-thinking) share the BailingMoeV2_5 architecture (model_type
+  // `bailing_hybrid`): MLA latent attention (kv_lora_rank=512,
+  // qk_rope_head_dim=64) with 4 dense layers at the start followed by 76
+  // MoE layers (first_k_dense_replace=4). 256 routed experts + 1 shared,
+  // 8 routed active per token. ~1T total, ~63B active. MIT license.
+  // Architecture verified against config.json on Hugging Face.
+  "ring-2.6-1t": {
+    // Ring = thinking variant with adaptive reasoning-effort (high/xhigh).
+    // Native context 128K (max_position_embeddings 131072), 256K via YaRN.
+    displayName: "Ring 2.6 1T-A63B (MoE)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ring-2.6-1T",
+    params: 1e12,
+    activeParams: 63e9,
+    layers: 80,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 128,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  "ling-2.6-1t": {
+    // Ling = non-thinking sibling. Identical MLA layout to Ring, but the
+    // Hugging Face config ships a longer native window
+    // (max_position_embeddings 262144 → 256K).
+    displayName: "Ling 2.6 1T-A63B (MoE)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ling-2.6-1T",
+    params: 1e12,
+    activeParams: 63e9,
+    layers: 80,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 256,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // ── Xiaomi MiMo (hybrid SWA + Global, MoE, 1M context) ────────────
+  // MiMo-V2.5-Pro: Xiaomi's flagship MoE (model_type `mimo_v2`). Hybrid
+  // attention pattern: every 7th layer is full / global, the other 6 are
+  // sliding-window (window=128) — 10 full + 60 SWA across 70 layers. 384
+  // routed experts, 8 active per token, no shared expert. 1.02T total /
+  // 42B active. MIT license. 1M context (max_position_embeddings 1048576).
+  // Headline notes:
+  // - QK head_dim is 192 and v_head_dim is 128 (asymmetric K/V dims). Our
+  //   hybrid formula uses a single `headDim` with factor=2; encoding the
+  //   asymmetry as headDim=160 = average(192, 128) reproduces the correct
+  //   per-token KV bytes (2 × kvHeads × 160 = kvHeads × 320 = 8 × 320).
+  // - The SWA layers share the same QK/V dims as the full layers, so no
+  //   separate fullKvHeads/fullHeadDim are needed.
+  "mimo-v2.5-pro": {
+    displayName: "MiMo V2.5 Pro 1T-A42B (MoE, hybrid)",
+    brand: "Xiaomi",
+    hfRepoId: "XiaomiMiMo/MiMo-V2.5-Pro",
+    params: 1.02e12,
+    activeParams: 42e9,
+    layers: 70,
+    kvHeads: 8,
+    headDim: 160, // average of QK head_dim 192 and v_head_dim 128
+    kvFormula: "hybrid",
+    fullLayers: 10, // 6:1 SWA:GA ratio → every 7th layer is full
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
   },
 };
 
@@ -1059,6 +1135,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "granite-4.1-8b": "2026-04-06",
   "granite-4.1-30b": "2026-04-06",
   "command-a-plus-2026": "2026-05-11",
+  "ring-2.6-1t": "2026-05-14",
+  "ling-2.6-1t": "2026-04-29",
+  "mimo-v2.5-pro": "2026-04-27",
 };
 
 /**
