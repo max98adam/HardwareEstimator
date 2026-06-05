@@ -268,6 +268,12 @@ export function Footer() {
                     note="Auto-detected when quantization_config sets quant_method=gptq (3/4/8 bit) or awq (4 bit). Engine list filters down to vLLM / TensorRT-LLM."
                   />
                   <FormulaCard
+                    label="NVFP4 (Blackwell)"
+                    models="RedHatAI / NVIDIA -NVFP4 / -FP4"
+                    formula="4-bit E2M1 + FP8 block scale ≈ 4.5 bpw"
+                    note="NVIDIA 4-bit float for Blackwell GPUs (vLLM / TensorRT-LLM). Offered in the Weights Quant dropdown only for catalog models that ship a real NVFP4 build on HuggingFace."
+                  />
+                  <FormulaCard
                     label="MLX (Apple Silicon)"
                     models="mlx-community/* and 'mlx' tag"
                     formula="INT4 / INT8 dtype + repo metadata"

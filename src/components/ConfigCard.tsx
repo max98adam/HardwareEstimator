@@ -76,6 +76,8 @@ export const ConfigCard = memo(function ConfigCard({
     config.model.modelKey !== "custom" ? KNOWN_MODELS[config.model.modelKey] : null;
   const maxK =
     knownModel?.maxContextK ?? config.model.customMaxK ?? DEFAULT_MAX_K;
+  // NVFP4 is offered only for models that ship a real NVFP4 build on HF.
+  const nvfp4Available = !!knownModel?.nvfp4RepoId;
 
   const [autoImportUrl, setAutoImportUrl] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
@@ -221,12 +223,26 @@ export const ConfigCard = memo(function ConfigCard({
         <ModelSelector
           value={config.model.modelKey}
           onChange={(modelKey) => {
+            const newKnown =
+              modelKey !== "custom" ? KNOWN_MODELS[modelKey] : null;
             const newMaxK =
               modelKey !== "custom"
-                ? (KNOWN_MODELS[modelKey]?.maxContextK ?? DEFAULT_MAX_K)
+                ? (newKnown?.maxContextK ?? DEFAULT_MAX_K)
                 : (config.model.customMaxK ?? DEFAULT_MAX_K);
             const contextK = Math.min(config.model.contextK, newMaxK);
-            updateModel({ modelKey, contextK });
+            const patch: Partial<ModelSettings> = { modelKey, contextK };
+            // NVFP4 is gated per-model. If the new model has no NVFP4 build,
+            // drop back to the default GGUF quant (and re-snap the engine to a
+            // compatible preset) so the selection can't get stuck off-menu.
+            if (config.model.quant === "nvfp4" && !newKnown?.nvfp4RepoId) {
+              patch.quant = "q4_k_m";
+              const fallback = pickCompatibleEngine(
+                QUANT_FAMILY_ENGINES[getQuantFamily("q4_k_m")],
+                config.model.engineId,
+              );
+              if (fallback) Object.assign(patch, fallback);
+            }
+            updateModel(patch);
           }}
           // NOTE: KNOWN_MODELS is still referenced once here, inside the
           // handler, because we need to look up maxContextK for the NEW
@@ -239,7 +255,15 @@ export const ConfigCard = memo(function ConfigCard({
             onChange({
               ...config,
               hfImportUrl: url,
-              model: { ...config.model, modelKey: "custom" },
+              model: {
+                ...config.model,
+                modelKey: "custom",
+                // Custom/imported models don't offer NVFP4 — clear a stuck
+                // NVFP4 selection so the quant stays in-menu.
+                ...(config.model.quant === "nvfp4"
+                  ? { quant: "q4_k_m" as QuantName }
+                  : {}),
+              },
             });
             setAutoImportUrl(url);
           }}
@@ -293,6 +317,7 @@ export const ConfigCard = memo(function ConfigCard({
           kvQuant={config.model.kvQuant}
           onQuantChange={onQuantChange}
           onKvQuantChange={(kvQuant) => updateModel({ kvQuant })}
+          nvfp4Available={nvfp4Available}
         />
 
         <ContextSlider

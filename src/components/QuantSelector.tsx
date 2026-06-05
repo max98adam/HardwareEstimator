@@ -20,6 +20,12 @@ interface QuantSelectorProps {
   kvQuant: QuantName;
   onQuantChange: (value: QuantName) => void;
   onKvQuantChange: (value: QuantName) => void;
+  /**
+   * Whether to offer NVFP4 in the weights dropdown. NVFP4 is only shown for
+   * models that ship a real NVFP4 build on HuggingFace (see MODEL_NVFP4_REPOS).
+   * Defaults to false (hidden) for custom / imported models.
+   */
+  nvfp4Available?: boolean | undefined;
 }
 
 const WEIGHT_QUANT_GROUPS = getWeightQuantGroups();
@@ -31,6 +37,7 @@ const WEIGHTS_TOOLTIP = `Bits per model weight, grouped by format family:
 • MLX (g64) — Apple Silicon native quantization.
 • GPTQ (g128) — calibration-based PTQ for GPU (vLLM, ExLlama).
 • AWQ 4-bit (g128) — activation-aware PTQ for GPU (vLLM, AutoAWQ).
+• NVFP4 — NVIDIA 4-bit float (Blackwell GPUs, vLLM / TensorRT-LLM). Shown only for models that ship an NVFP4 build on HuggingFace.
 
 Lower bits = smaller model but slightly worse quality. Q4 / GPTQ-4bit / AWQ-4bit are the most popular choices for production inference.`;
 
@@ -47,7 +54,13 @@ export function QuantSelector({
   kvQuant,
   onQuantChange,
   onKvQuantChange,
+  nvfp4Available = false,
 }: QuantSelectorProps) {
+  // NVFP4 is gated per-model: only list it when the selected model has a real
+  // NVFP4 build. Every other family is always shown.
+  const weightGroups = nvfp4Available
+    ? WEIGHT_QUANT_GROUPS
+    : WEIGHT_QUANT_GROUPS.filter((g) => g.family !== "nvfp4");
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="space-y-2">
@@ -60,7 +73,7 @@ export function QuantSelector({
             <span>{getQuantLabel(quant)}</span>
           </SelectTrigger>
           <SelectContent>
-            {WEIGHT_QUANT_GROUPS.map((group) => (
+            {weightGroups.map((group) => (
               <SelectGroup key={group.familyLabel}>
                 <SelectLabel>{group.familyLabel}</SelectLabel>
                 {group.items.map((q) => (
