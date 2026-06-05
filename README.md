@@ -6,7 +6,7 @@ A web calculator that estimates RAM, storage, and token throughput (TPS) for run
 
 🔗 **Live demo:** https://max98adam.github.io/HardwareEstimator/
 
-This fork extends the original with the latest open-weight models (gpt-oss, Llama 4, Qwen 3-Next, DeepSeek V3.2 / V4, Kimi K2, GLM-5.1, MiniMax M2.x, Mistral Large 3 / Small 4 / Medium 3.5, IBM Granite 4.1, Cohere Command A+, InclusionAI Ring/Ling 2.6, Xiaomi MiMo V2.5 Pro) and inference hardware (NVIDIA RTX PRO 6000 Blackwell, B300, AMD MI355X, …). Weights quantization covers GGUF, GPTQ, AWQ, MLX and NVFP4 (the latter shown only for models that ship an NVFP4 build on HuggingFace).
+This fork extends the original with the latest open-weight models (gpt-oss, Llama 4, Qwen 3-Next, DeepSeek V3.2 / V4, Kimi K2, GLM-5.1 / 4.7-Flash, MiniMax M2.x, Mistral Large 3 / Small 4 / Medium 3.5 / Devstral 2, IBM Granite 4.1, Cohere Command A+, InclusionAI Ring/Ling 2.6, Xiaomi MiMo V2.5 Pro) and inference hardware (NVIDIA RTX PRO 6000 Blackwell, B300, AMD MI355X, …). Weights quantization covers GGUF, GPTQ, AWQ, MLX and NVFP4 (the latter shown only for models that ship an NVFP4 build on HuggingFace).
 
 _Last updated by Claude on 2026-06-01._ The model & hardware catalog is refreshed by a scheduled Claude Code routine — see [CLAUDE.md](./CLAUDE.md).
 
