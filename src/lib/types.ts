@@ -17,6 +17,7 @@ export type ModelBrand =
   | "Meta"
   | "Mistral"
   | "Microsoft"
+  | "NVIDIA"
   | "DeepSeek"
   | "Moonshot"
   | "Zhipu"
