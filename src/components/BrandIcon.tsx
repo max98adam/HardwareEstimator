@@ -1,5 +1,11 @@
 import type { IconType } from "react-icons";
-import { SiGoogle, SiMeta, SiMistralai, SiAlibabadotcom } from "react-icons/si";
+import {
+  SiGoogle,
+  SiMeta,
+  SiMistralai,
+  SiAlibabadotcom,
+  SiNvidia,
+} from "react-icons/si";
 import type { ModelBrand } from "@/lib/types";
 
 interface BrandIconProps {
@@ -17,6 +23,7 @@ const BRAND_COLORS: Partial<Record<ModelBrand, string>> = {
   Meta: "#0467DF",
   Mistral: "#FA520F",
   Alibaba: "#FF6A00",
+  NVIDIA: "#76B900",
 };
 
 const BRAND_ICONS: Partial<Record<ModelBrand, IconType>> = {
@@ -24,6 +31,7 @@ const BRAND_ICONS: Partial<Record<ModelBrand, IconType>> = {
   Meta: SiMeta,
   Mistral: SiMistralai,
   Alibaba: SiAlibabadotcom,
+  NVIDIA: SiNvidia,
 };
 
 // Microsoft Windows 4-square logo. Excluded from simple-icons due to

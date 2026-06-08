@@ -11,6 +11,7 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Meta", label: "Meta" },
   { key: "Mistral", label: "Mistral AI" },
   { key: "Microsoft", label: "Microsoft" },
+  { key: "NVIDIA", label: "NVIDIA Nemotron" },
   { key: "DeepSeek", label: "DeepSeek" },
   { key: "Moonshot", label: "Moonshot AI" },
   { key: "Zhipu", label: "Z.ai (Zhipu)" },
@@ -117,6 +118,30 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     slidingWindow: 512,
     moe: false,
     maxContextK: 128,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  "gemma4-12b": {
+    // Gemma 4 12B (dense, gemma4_unified): sliding kv heads 8 / head_dim 256,
+    // full kv heads 1 / head_dim 512 (num_global_key_value_heads=1,
+    // global_head_dim=512). attention_k_eq_v=true → kvFactor=1. layer_types
+    // alternate 5 sliding + 1 full across 48 layers → 8 full layers. 256K
+    // context (max_position_embeddings 262144). vision_config + audio_config
+    // present → multimodal (text+image+audio+video in).
+    displayName: "Gemma 4 12B",
+    brand: "Google",
+    hfRepoId: "google/gemma-4-12B-it",
+    params: 11.95e9,
+    layers: 48,
+    kvHeads: 8,
+    headDim: 256,
+    kvFormula: "hybrid",
+    fullLayers: 8,
+    fullKvHeads: 1,
+    fullHeadDim: 512,
+    slidingWindow: 1024,
+    kvFactor: 1,
+    moe: false,
+    maxContextK: 256,
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
   "gemma4-26b-a4b": {
@@ -598,6 +623,30 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     moe: false,
     maxContextK: 16,
     capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // ── NVIDIA Nemotron (Mamba-2 + MoE + selective attention) ─────────
+  // Nemotron 3 Ultra (model_type nemotron_h): hybrid stack of Mamba-2
+  // (constant-size SSM state), MoE MLP-only blocks, and a small number of
+  // selective full-attention layers. Of the 108 transformer blocks only 12
+  // are attention — the rest are Mamba or MoE-only and contribute ≈0 KV
+  // cache, so we model it with `linear_hybrid` (fullLayers=12). kvHeads=2,
+  // headDim=128 on the attention layers; 512 routed experts + 1 shared, 22
+  // active per token (≈55B active of 550B total). 256K native context
+  // (max_position_embeddings 262144). OpenMDW-1.1 license.
+  "nemotron-3-ultra": {
+    displayName: "Nemotron 3 Ultra 550B-A55B (MoE, hybrid)",
+    brand: "NVIDIA",
+    hfRepoId: "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
+    params: 550e9,
+    activeParams: 55e9,
+    layers: 108,
+    kvHeads: 2,
+    headDim: 128,
+    kvFormula: "linear_hybrid",
+    fullLayers: 12,
+    moe: true,
+    maxContextK: 256,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
   },
   // ── DeepSeek (standard + MLA) ─────────────────────────────────────
   "deepseek-r1-distill-7b": {
@@ -1107,7 +1156,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-05-25.
+ * Fetched 2026-06-08.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1116,6 +1165,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma3-27b": "2025-03-01",
   "gemma4-e2b": "2026-03-02",
   "gemma4-e4b": "2026-03-02",
+  "gemma4-12b": "2026-05-23",
   "gemma4-26b-a4b": "2026-03-11",
   "gemma4-31b": "2026-03-11",
   "gpt-oss-20b": "2025-08-04",
@@ -1148,6 +1198,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mixtral-8x22b": "2024-04-16",
   "phi-3.5-mini": "2024-08-16",
   "phi-4": "2024-12-11",
+  "nemotron-3-ultra": "2026-06-03",
   "deepseek-r1-distill-7b": "2025-01-20",
   "deepseek-r1-distill-14b": "2025-01-20",
   "deepseek-r1-distill-32b": "2025-01-20",
@@ -1187,9 +1238,10 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-05-22.
+ * Fetched 2026-06-08.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
+  "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
   "gemma4-26b-a4b": "RedHatAI/gemma-4-26B-A4B-it-NVFP4",
   "gemma4-31b": "RedHatAI/gemma-4-31B-it-NVFP4",
   "qwen3.5-9b": "AxionML/Qwen3.5-9B-NVFP4",
@@ -1207,6 +1259,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "mistral-medium-3.5": "RecViking/Mistral-Medium-3.5-128B-NVFP4",
   "mistral-large-3": "mistralai/Mistral-Large-3-675B-Instruct-2512-NVFP4",
   "mistral-small-4": "mistralai/Mistral-Small-4-119B-2603-NVFP4",
+  "nemotron-3-ultra": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4",
   "deepseek-r1-distill-32b": "nm-testing/DeepSeek-R1-Distill-Qwen-32B-NVFP4",
   "deepseek-r1": "RedHatAI/DeepSeek-R1-NVFP4-FP8-BLOCK",
   "deepseek-v3.2": "RedHatAI/DeepSeek-V3.2-NVFP4-FP8-BLOCK",
