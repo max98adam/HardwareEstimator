@@ -348,6 +348,20 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 1344,
     memoryType: "GDDR7",
   }),
+  // RTX PRO 5000 Blackwell 72GB (launched Dec 2025): same GB202 silicon and
+  // 384-bit GDDR7 bus as the 48 GB SKU — 24 × 3 GB GDDR7 modules in clamshell
+  // at 28 Gbps → 1344 GB/s. The 50% larger VRAM matters for fitting bigger
+  // models (e.g. 70B FP8) without dropping to a workstation card with less
+  // bandwidth.
+  gpuPreset({
+    id: "rtx-pro-5000-blackwell-72gb",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 5000 Blackwell 72GB",
+    gpuInfo: "RTX PRO 5000 Blackwell 72GB",
+    vramGb: 72,
+    bandwidthGBs: 1344,
+    memoryType: "GDDR7",
+  }),
 
   // ── NVIDIA Consumer ───────────────────────────────────────────────────
   gpuPreset({

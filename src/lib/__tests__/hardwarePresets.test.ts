@@ -207,6 +207,7 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["rtx-pro-6000-blackwell", "1792"],
     ["rtx-pro-6000-blackwell-server", "1597"],
     ["rtx-pro-5000-blackwell", "1344"],
+    ["rtx-pro-5000-blackwell-72gb", "1344"],
     ["mi300x", "5300"],
     ["mi325x", "6000"],
     ["mi355x", "8000"],

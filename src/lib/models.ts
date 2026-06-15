@@ -872,6 +872,28 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // Kimi K2.7-Code (model_type kimi_k25): coding-specialised K2 with the same
+  // MLA core as K2/K2.5/K2.6 — kv_lora_rank=512, qk_rope_head_dim=64, 61 layers
+  // (first_k_dense_replace=1), 384 routed experts (8 active) + 1 shared, 256K
+  // context. Includes the MoonViT vision encoder (vision_config in config.json)
+  // → multimodal. Reduces reasoning-token usage ~30% vs K2.6 while improving
+  // long-horizon coding-benchmark scores.
+  "kimi-k2.7-code": {
+    displayName: "Kimi K2.7-Code 1T-A32B (MoE)",
+    brand: "Moonshot",
+    hfRepoId: "moonshotai/Kimi-K2.7-Code",
+    params: 1e12,
+    layers: 61,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    activeParams: 32e9,
+    maxContextK: 256,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Z.ai (Zhipu) — GLM (standard GQA MoE, partial RoPE) ───────────
   "glm-4.5-air": {
     // The lighter, widely self-hosted GLM — 106B-A12B, 46 layers.
@@ -958,6 +980,29 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
   // ── MiniMax ───────────────────────────────────────────────────────
+  // MiniMax-M3 (model_type minimax_m3_vl): introduces MiniMax Sparse Attention
+  // (MSA) — block-sparse top-k (16 blocks of 128 tokens) over standard GQA on
+  // layers 3-59 (the first 3 layers are dense full-attention). num_attention_
+  // heads=64, num_key_value_heads=4, head_dim=128. 128 routed experts + 1
+  // shared, 4 routed active per token. Native multimodal (text+image+video).
+  // 1M context (max_position_embeddings 1048576).
+  // MSA reduces KV compute and (per the card) memory footprint at long context,
+  // but none of our four formulas describes block-sparse top-k KV exactly — so
+  // we model it as `standard` GQA (full KV at every layer) as a safe upper
+  // bound, mirroring how DeepSeek V3.2 (MLA + DSA) is modeled as plain MLA.
+  "minimax-m3": {
+    displayName: "MiniMax-M3 428B-A23B (MoE)",
+    brand: "MiniMax",
+    hfRepoId: "MiniMaxAI/MiniMax-M3",
+    params: 428e9,
+    activeParams: 23e9,
+    layers: 60,
+    kvHeads: 4,
+    headDim: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   "minimax-m1": {
     // MiniMax-M1: 456B-A45.9B reasoning model with hybrid "lightning"
     // (linear) attention — full attention only every 8th layer (10 of 80).
@@ -1075,6 +1120,28 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 195,
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
+  // North-Mini-Code 1.0 (model_type cohere2_moe): Cohere's first agentic-
+  // coding open-weight MoE. Same sliding-window/full mix as Command A+ but
+  // smaller and text-only: 49 layers, kvHeads=4, headDim=128, sliding_window
+  // 4096, interleaved 3:1 SWA:Global → 12 full + 37 sliding layers. 128
+  // routed experts (8 active) and no shared expert. 30B total / 3B active.
+  // Native 500K context (max_position_embeddings 500000 → ≈488K). Apache-2.0.
+  "north-mini-code-1": {
+    displayName: "North-Mini-Code 1.0 30B-A3B (MoE)",
+    brand: "Cohere",
+    hfRepoId: "CohereLabs/North-Mini-Code-1.0",
+    params: 30e9,
+    activeParams: 3e9,
+    layers: 49,
+    kvHeads: 4,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 12,
+    slidingWindow: 4096,
+    moe: true,
+    maxContextK: 488,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // ── InclusionAI (Ant Group) — Ling/Ring (MLA, bailing_hybrid) ─────
   // Ant Group's open-source MoE series. Both Ring (thinking) and Ling
   // (non-thinking) share the BailingMoeV2_5 architecture (model_type
@@ -1156,7 +1223,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-06-08.
+ * Fetched 2026-06-15.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1212,6 +1279,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "kimi-k2-0905": "2025-09-03",
   "kimi-linear-48b": "2025-10-30",
   "kimi-k2.6": "2026-04-14",
+  "kimi-k2.7-code": "2026-06-11",
   "glm-4.5-air": "2025-07-20",
   "glm-4.6": "2025-09-29",
   "glm-4.7-flash": "2026-01-19",
@@ -1221,9 +1289,11 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "minimax-m2": "2025-10-22",
   "minimax-m2.5": "2026-02-12",
   "minimax-m2.7": "2026-04-09",
+  "minimax-m3": "2026-06-02",
   "granite-4.1-8b": "2026-04-06",
   "granite-4.1-30b": "2026-04-06",
   "command-a-plus-2026": "2026-05-11",
+  "north-mini-code-1": "2026-06-05",
   "ring-2.6-1t": "2026-05-14",
   "ling-2.6-1t": "2026-04-29",
   "mimo-v2.5-pro": "2026-04-27",
@@ -1238,7 +1308,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-06-08.
+ * Fetched 2026-06-15.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1272,6 +1342,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "glm-5.1": "nvidia/GLM-5.1-NVFP4",
   "minimax-m2.5": "RedHatAI/MiniMax-M2.5-NVFP4",
   "minimax-m2.7": "nvidia/MiniMax-M2.7-NVFP4",
+  "minimax-m3": "brandonmusic/MiniMax-M3-NVFP4",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
