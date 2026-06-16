@@ -93,6 +93,7 @@ const LETTER_BRANDS: Partial<
   Cohere: { text: "Co", bg: "#FF7759" },
   InclusionAI: { text: "iA", bg: "#1677FF" },
   Xiaomi: { text: "Mi", bg: "#FF6900" },
+  LG: { text: "LG", bg: "#A50034" },
 };
 
 export function BrandIcon({ brand, size = 14 }: BrandIconProps) {

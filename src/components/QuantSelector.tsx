@@ -26,6 +26,12 @@ interface QuantSelectorProps {
    * Defaults to false (hidden) for custom / imported models.
    */
   nvfp4Available?: boolean | undefined;
+  /**
+   * Whether to offer FP8 in the weights dropdown. FP8 is only shown for
+   * models that ship a real FP8 build on HuggingFace (see MODEL_FP8_REPOS).
+   * Defaults to false (hidden) for custom / imported models.
+   */
+  fp8Available?: boolean | undefined;
 }
 
 const WEIGHT_QUANT_GROUPS = getWeightQuantGroups();
@@ -37,6 +43,7 @@ const WEIGHTS_TOOLTIP = `Bits per model weight, grouped by format family:
 • MLX (g64) — Apple Silicon native quantization.
 • GPTQ (g128) — calibration-based PTQ for GPU (vLLM, ExLlama).
 • AWQ 4-bit (g128) — activation-aware PTQ for GPU (vLLM, AutoAWQ).
+• FP8 — NVIDIA 8-bit float (Hopper+/Blackwell GPUs, vLLM / TensorRT-LLM). Shown only for models that ship an FP8 build on HuggingFace.
 • NVFP4 — NVIDIA 4-bit float (Blackwell GPUs, vLLM / TensorRT-LLM). Shown only for models that ship an NVFP4 build on HuggingFace.
 
 Lower bits = smaller model but slightly worse quality. Q4 / GPTQ-4bit / AWQ-4bit are the most popular choices for production inference.`;
@@ -55,12 +62,15 @@ export function QuantSelector({
   onQuantChange,
   onKvQuantChange,
   nvfp4Available = false,
+  fp8Available = false,
 }: QuantSelectorProps) {
-  // NVFP4 is gated per-model: only list it when the selected model has a real
-  // NVFP4 build. Every other family is always shown.
-  const weightGroups = nvfp4Available
-    ? WEIGHT_QUANT_GROUPS
-    : WEIGHT_QUANT_GROUPS.filter((g) => g.family !== "nvfp4");
+  // FP8 and NVFP4 are gated per-model: only list them when the selected model
+  // has a real FP8 / NVFP4 build on HF. Every other family is always shown.
+  const weightGroups = WEIGHT_QUANT_GROUPS.filter((g) => {
+    if (g.family === "nvfp4") return nvfp4Available;
+    if (g.family === "fp8") return fp8Available;
+    return true;
+  });
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="space-y-2">

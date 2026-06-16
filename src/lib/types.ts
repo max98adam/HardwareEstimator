@@ -25,7 +25,8 @@ export type ModelBrand =
   | "IBM"
   | "Cohere"
   | "InclusionAI"
-  | "Xiaomi";
+  | "Xiaomi"
+  | "LG";
 
 /**
  * Architecture parameters of a model.
@@ -69,6 +70,14 @@ export interface KnownModel extends ModelConfig {
    * in bulk from `MODEL_NVFP4_REPOS` in models.ts.
    */
   nvfp4RepoId?: string | undefined;
+  /**
+   * HuggingFace repo of a real FP8 build of this model, when one exists.
+   * Presence gates the FP8 weights-quant option in the selector — we only
+   * offer FP8 for models that actually ship an FP8 checkpoint (some MoE
+   * flagships are natively FP8, so this can point at the main repo).
+   * Populated in bulk from `MODEL_FP8_REPOS` in models.ts.
+   */
+  fp8RepoId?: string | undefined;
   /** Optional capability flags for display in the selector and results. */
   capabilities?: ModelCapabilities | undefined;
   /**
@@ -98,6 +107,11 @@ export type QuantName =
   | "gptq_3bit"
   // AWQ family — activation-aware PTQ for GPU inference (vLLM / AutoAWQ)
   | "awq_4bit"
+  // FP8 (E4M3) — 8-bit float for GPU inference (Hopper+ / Blackwell, vLLM /
+  // TensorRT-LLM). Only offered for models that ship a real FP8 build on HF
+  // (see MODEL_FP8_REPOS) — DeepSeek V3/V3.2/V4 are natively FP8, most other
+  // popular MoE flagships have a third-party FP8 mirror.
+  | "fp8"
   // NVFP4 — NVIDIA 4-bit float microscaling (Blackwell; vLLM / TensorRT-LLM).
   // Only offered for models that ship a real NVFP4 build (see MODEL_NVFP4_REPOS).
   | "nvfp4"

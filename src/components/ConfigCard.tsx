@@ -76,8 +76,9 @@ export const ConfigCard = memo(function ConfigCard({
     config.model.modelKey !== "custom" ? KNOWN_MODELS[config.model.modelKey] : null;
   const maxK =
     knownModel?.maxContextK ?? config.model.customMaxK ?? DEFAULT_MAX_K;
-  // NVFP4 is offered only for models that ship a real NVFP4 build on HF.
+  // NVFP4 / FP8 are offered only for models that ship a real build on HF.
   const nvfp4Available = !!knownModel?.nvfp4RepoId;
+  const fp8Available = !!knownModel?.fp8RepoId;
 
   const [autoImportUrl, setAutoImportUrl] = useState<string | null>(null);
   const [capturing, setCapturing] = useState(false);
@@ -231,10 +232,14 @@ export const ConfigCard = memo(function ConfigCard({
                 : (config.model.customMaxK ?? DEFAULT_MAX_K);
             const contextK = Math.min(config.model.contextK, newMaxK);
             const patch: Partial<ModelSettings> = { modelKey, contextK };
-            // NVFP4 is gated per-model. If the new model has no NVFP4 build,
-            // drop back to the default GGUF quant (and re-snap the engine to a
-            // compatible preset) so the selection can't get stuck off-menu.
-            if (config.model.quant === "nvfp4" && !newKnown?.nvfp4RepoId) {
+            // NVFP4 / FP8 are gated per-model. If the new model has no
+            // matching build, drop back to the default GGUF quant (and re-snap
+            // the engine to a compatible preset) so the selection can't get
+            // stuck off-menu.
+            const stuck =
+              (config.model.quant === "nvfp4" && !newKnown?.nvfp4RepoId) ||
+              (config.model.quant === "fp8" && !newKnown?.fp8RepoId);
+            if (stuck) {
               patch.quant = "q4_k_m";
               const fallback = pickCompatibleEngine(
                 QUANT_FAMILY_ENGINES[getQuantFamily("q4_k_m")],
@@ -258,9 +263,10 @@ export const ConfigCard = memo(function ConfigCard({
               model: {
                 ...config.model,
                 modelKey: "custom",
-                // Custom/imported models don't offer NVFP4 — clear a stuck
-                // NVFP4 selection so the quant stays in-menu.
-                ...(config.model.quant === "nvfp4"
+                // Custom/imported models don't offer NVFP4 or FP8 — clear a
+                // stuck NVFP4/FP8 selection so the quant stays in-menu.
+                ...(config.model.quant === "nvfp4" ||
+                config.model.quant === "fp8"
                   ? { quant: "q4_k_m" as QuantName }
                   : {}),
               },
@@ -318,6 +324,7 @@ export const ConfigCard = memo(function ConfigCard({
           onQuantChange={onQuantChange}
           onKvQuantChange={(kvQuant) => updateModel({ kvQuant })}
           nvfp4Available={nvfp4Available}
+          fp8Available={fp8Available}
         />
 
         <ContextSlider

@@ -115,6 +115,42 @@ describe("HARDWARE_PRESETS — Apple Silicon presets", () => {
   });
 });
 
+describe("HARDWARE_PRESETS — NVIDIA unified-memory presets (DGX Spark / GB10)", () => {
+  // GB10-class systems (DGX Spark) share the unified-memory branch with
+  // Apple Silicon — no discrete GPU bandwidth, the 273 GB/s LPDDR5X pool
+  // is what gates inference. They live in their own category so the UI
+  // can group "NVIDIA Unified Memory" separately from Apple Silicon.
+  const unifiedPresets = HARDWARE_PRESETS.filter(
+    (p) => p.category === "nvidia_unified",
+  );
+
+  it("zeroes out the GPU block (unified memory branch)", () => {
+    for (const preset of unifiedPresets) {
+      expect(preset.hosting.gpuCount, `${preset.id} gpuCount`).toBe("0");
+      expect(preset.hosting.gpuVram, `${preset.id} gpuVram`).toBe("0");
+      expect(preset.hosting.gpuBandwidth, `${preset.id} gpuBandwidth`).toBe("0");
+      expect(preset.hosting.gpuInfo, `${preset.id} gpuInfo`).toBe("");
+    }
+  });
+
+  it("fills RAM bandwidth + capacity and uses NVIDIA-branded CPU + LPDDR5(X)", () => {
+    for (const preset of unifiedPresets) {
+      const bw = parseFloat(preset.hosting.ramBandwidthGBs ?? "");
+      const ram = parseFloat(preset.hosting.availableRam ?? "");
+      expect(bw, `${preset.id} ramBandwidthGBs`).toBeGreaterThan(0);
+      expect(ram, `${preset.id} availableRam`).toBeGreaterThan(0);
+      expect(preset.hosting.cpuModel ?? "").toMatch(/NVIDIA/);
+      expect(preset.hosting.ramType ?? "").toMatch(/LPDDR5/);
+    }
+  });
+
+  it("sets BW efficiency to 60% (unified-memory access pattern)", () => {
+    for (const preset of unifiedPresets) {
+      expect(preset.hosting.efficiency, `${preset.id} efficiency`).toBe("60");
+    }
+  });
+});
+
 describe("HARDWARE_PRESETS — discrete GPU presets", () => {
   const gpuPresets = HARDWARE_PRESETS.filter(
     (p) =>
@@ -198,6 +234,7 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["m1-max", "400"],
     ["m5-max", "614"],
     ["m3-ultra", "819"],
+    ["nvidia-dgx-spark", "273"],
     ["h100-sxm", "3350"],
     ["h200", "4800"],
     ["b200", "8000"],
