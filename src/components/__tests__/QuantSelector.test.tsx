@@ -7,6 +7,7 @@ import type { QuantName } from "@/lib/types";
 function renderSelector(props?: {
   quant?: QuantName;
   nvfp4Available?: boolean;
+  fp8Available?: boolean;
 }) {
   render(
     <QuantSelector
@@ -15,6 +16,7 @@ function renderSelector(props?: {
       onQuantChange={() => {}}
       onKvQuantChange={() => {}}
       nvfp4Available={props?.nvfp4Available ?? false}
+      fp8Available={props?.fp8Available ?? false}
     />,
   );
 }
@@ -41,5 +43,26 @@ describe("QuantSelector — NVFP4 is gated per-model", () => {
 
     const listbox = await screen.findByRole("listbox");
     expect(within(listbox).getByText(/NVFP4 \(4-bit\)/)).toBeInTheDocument();
+  });
+});
+
+describe("QuantSelector — FP8 is gated per-model", () => {
+  it("hides FP8 when the model has no FP8 build", async () => {
+    const user = userEvent.setup();
+    renderSelector({ fp8Available: false });
+    await user.click(weightsTrigger());
+
+    const listbox = await screen.findByRole("listbox");
+    expect(within(listbox).getByText(/AWQ 4-bit/)).toBeInTheDocument();
+    expect(within(listbox).queryByText(/FP8 \(8-bit\)/)).toBeNull();
+  });
+
+  it("shows FP8 when the model ships an FP8 build", async () => {
+    const user = userEvent.setup();
+    renderSelector({ fp8Available: true });
+    await user.click(weightsTrigger());
+
+    const listbox = await screen.findByRole("listbox");
+    expect(within(listbox).getByText(/FP8 \(8-bit\)/)).toBeInTheDocument();
   });
 });

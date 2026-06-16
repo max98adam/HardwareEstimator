@@ -5,7 +5,14 @@ import type { QuantName } from "./types";
  * runtime ecosystem. Used both for grouping in the UI selector and for
  * filtering compatible inference engines (see QUANT_FAMILY_ENGINES).
  */
-export type QuantFamily = "float" | "gguf" | "gptq" | "awq" | "mlx" | "nvfp4";
+export type QuantFamily =
+  | "float"
+  | "gguf"
+  | "gptq"
+  | "awq"
+  | "mlx"
+  | "fp8"
+  | "nvfp4";
 
 /**
  * Single source of truth for everything we know about a quantization format:
@@ -185,6 +192,20 @@ export const QUANT_SPECS: QuantSpec[] = [
     familyLabel: "AWQ (vLLM / AutoAWQ, GPU)",
   },
 
+  // ─── FP8 (8-bit float — Hopper+/Blackwell, vLLM / TensorRT-LLM) ───────────
+  // E4M3 elements + per-block / per-tensor FP32 scale → effectively 8 bpw
+  // (the scale overhead is negligible at block sizes ≥ 128). DeepSeek V3 /
+  // V3.2 / V4 ship natively in FP8; most other popular MoE flagships have a
+  // third-party FP8 mirror on HF. Only shown for models with a real FP8
+  // build (gated per-model via fp8RepoId).
+  {
+    value: "fp8",
+    label: "FP8 (8-bit)",
+    bpw: 8,
+    family: "fp8",
+    familyLabel: "FP8 (NVIDIA Hopper+/Blackwell — vLLM / TensorRT-LLM)",
+  },
+
   // ─── NVFP4 (NVIDIA 4-bit float microscaling — Blackwell, vLLM / TensorRT) ─
   // E2M1 4-bit elements + per-block (16) E4M3 FP8 scale (8/16 = 0.5 bpw) +
   // a negligible per-tensor FP32 scale → 4.5 bpw effective. Only shown for
@@ -215,6 +236,8 @@ export const QUANT_FAMILY_ENGINES: Record<QuantFamily, ReadonlySet<string>> = {
   mlx: new Set(["llamacpp", "custom"]),
   gptq: new Set(["vllm", "tensorrt", "custom"]),
   awq: new Set(["vllm", "tensorrt", "custom"]),
+  // FP8 is a Hopper+/Blackwell GPU format — same engine support as GPTQ/AWQ.
+  fp8: new Set(["vllm", "tensorrt", "custom"]),
   // NVFP4 is a Blackwell GPU format — same engine support as GPTQ/AWQ.
   nvfp4: new Set(["vllm", "tensorrt", "custom"]),
 };

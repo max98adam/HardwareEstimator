@@ -182,6 +182,8 @@ export const QUANT_BYTES: Record<string, number> = {
   gptq_3bit: 3.25 / 8,
   // AWQ — same +0.25 bpw overhead (FP16 scale + scaled_zero per g128)
   awq_4bit: 4.25 / 8,
+  // FP8 — E4M3 8-bit float, per-block FP32 scale negligible at g128+ = 8 bpw
+  fp8: 1,
   // NVFP4 — 4-bit E2M1 + E4M3 FP8 block scale (g16) = 4.5 bpw (matches QUANT_BITS)
   nvfp4: 4.5 / 8,
   // MLX — bits + 0.5 bpw (FP16 scale + bias per g64)

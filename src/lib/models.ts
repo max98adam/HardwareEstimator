@@ -1370,9 +1370,66 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "minimax-m3": "brandonmusic/MiniMax-M3-NVFP4",
 };
 
+/**
+ * Models that ship a real FP8 (E4M3) build on HuggingFace, mapped to a
+ * representative FP8 repo. Presence of an entry is what unlocks the FP8
+ * option in the weights-quant selector — we only offer FP8 for a model
+ * when an FP8 checkpoint of that model actually exists on the Hub.
+ *
+ * DeepSeek V3 / R1 / V3.2 / V4 are natively shipped in FP8, so they point
+ * at the main repo. Most other entries point at a faithful publisher
+ * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
+ * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
+ * catalog refresh; drop entries whose repo disappears.
+ * Fetched 2026-06-16.
+ */
+export const MODEL_FP8_REPOS: Record<string, string> = {
+  // Native FP8 — main repos ship as FP8 / FP8-Block
+  "deepseek-v3": "deepseek-ai/DeepSeek-V3",
+  "deepseek-r1": "deepseek-ai/DeepSeek-R1",
+  "deepseek-v3.2": "deepseek-ai/DeepSeek-V3.2-Exp",
+  "deepseek-v4-flash": "deepseek-ai/DeepSeek-V4-Flash",
+  "deepseek-v4-pro": "deepseek-ai/DeepSeek-V4-Pro",
+  // Third-party / vendor FP8 mirrors
+  "qwen3-8b": "Qwen/Qwen3-8B-FP8",
+  "qwen3-32b": "Qwen/Qwen3-32B-FP8",
+  "qwen3-235b-a22b": "Qwen/Qwen3-235B-A22B-FP8",
+  "qwen3-next-80b-a3b": "Qwen/Qwen3-Next-80B-A3B-Instruct-FP8",
+  "qwen3-coder-480b": "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8",
+  "qwen3.5-9b": "RedHatAI/Qwen3.5-9B-FP8-dynamic",
+  "qwen3.6-27b": "Qwen/Qwen3.6-27B-FP8",
+  "qwen3.6-35b-a3b": "Qwen/Qwen3.6-35B-A3B-FP8",
+  "llama3.1-8b": "RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",
+  "llama3.3-70b": "RedHatAI/Llama-3.3-70B-Instruct-FP8-dynamic",
+  "llama3.1-405b": "RedHatAI/Meta-Llama-3.1-405B-Instruct-FP8",
+  "llama4-scout": "RedHatAI/Llama-4-Scout-17B-16E-Instruct-FP8-dynamic",
+  "llama4-maverick": "RedHatAI/Llama-4-Maverick-17B-128E-Instruct-FP8",
+  "mistral-nemo-12b": "RedHatAI/Mistral-Nemo-Instruct-2407-FP8",
+  "mistral-small-24b": "RedHatAI/Mistral-Small-24B-Instruct-2501-FP8-dynamic",
+  "mistral-large-3": "mistralai/Mistral-Large-3-675B-Instruct-2512-FP8",
+  "devstral-2-123b": "mistralai/Devstral-2-123B-Instruct-2512-FP8",
+  "gemma3-27b": "RedHatAI/gemma-3-27b-it-FP8-dynamic",
+  "gemma4-12b": "RedHatAI/gemma-4-12B-it-FP8-dynamic",
+  "gemma4-26b-a4b": "RedHatAI/gemma-4-26B-A4B-it-FP8-dynamic",
+  "gemma4-31b": "RedHatAI/gemma-4-31B-it-FP8-dynamic",
+  "phi-4": "RedHatAI/phi-4-FP8-dynamic",
+  "deepseek-r1-distill-32b": "RedHatAI/DeepSeek-R1-Distill-Qwen-32B-FP8-dynamic",
+  "deepseek-r1-distill-70b": "RedHatAI/DeepSeek-R1-Distill-Llama-70B-FP8-dynamic",
+  "glm-4.5-air": "zai-org/GLM-4.5-Air-FP8",
+  "glm-4.6": "zai-org/GLM-4.6-FP8",
+  "glm-4.7": "zai-org/GLM-4.7-FP8",
+  "glm-5.1": "zai-org/GLM-5.1-FP8",
+  "command-a-plus-2026": "CohereLabs/command-a-plus-05-2026-FP8",
+  "north-mini-code-1": "CohereLabs/North-Mini-Code-1.0-FP8",
+  "exaone-4.5-33b": "LGAI-EXAONE/EXAONE-4.5-33B-FP8",
+  "granite-4.1-8b": "ibm-granite/granite-4.1-8b-FP8",
+  "granite-4.1-30b": "ibm-granite/granite-4.1-30b-FP8",
+};
+
 // Enrich the catalog once at module load so every consumer of KnownModel
-// (selector, result card, …) sees `releaseDate` and `nvfp4RepoId`. Runs before
-// the model-group singleton below, which copies fields onto each ModelOption.
+// (selector, result card, …) sees `releaseDate`, `nvfp4RepoId`, `fp8RepoId`.
+// Runs before the model-group singleton below, which copies fields onto each
+// ModelOption.
 for (const [key, date] of Object.entries(MODEL_RELEASE_DATES)) {
   const model = KNOWN_MODELS[key];
   if (model) model.releaseDate = date;
@@ -1380,6 +1437,10 @@ for (const [key, date] of Object.entries(MODEL_RELEASE_DATES)) {
 for (const [key, repo] of Object.entries(MODEL_NVFP4_REPOS)) {
   const model = KNOWN_MODELS[key];
   if (model) model.nvfp4RepoId = repo;
+}
+for (const [key, repo] of Object.entries(MODEL_FP8_REPOS)) {
+  const model = KNOWN_MODELS[key];
+  if (model) model.fp8RepoId = repo;
 }
 
 export function getModelsByBrand(): {
