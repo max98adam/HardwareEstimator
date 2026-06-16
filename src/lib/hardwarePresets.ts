@@ -33,6 +33,7 @@ export type HardwareCategory =
   | "nvidia_datacenter"
   | "nvidia_workstation"
   | "nvidia_consumer"
+  | "nvidia_unified"
   | "amd_datacenter";
 
 /** Human-readable labels for each category, in display order. */
@@ -42,6 +43,7 @@ export const HARDWARE_CATEGORY_LABELS: Record<HardwareCategory, string> = {
   nvidia_datacenter: "NVIDIA Data Center",
   nvidia_workstation: "NVIDIA RTX PRO (Workstation)",
   nvidia_consumer: "NVIDIA Consumer",
+  nvidia_unified: "NVIDIA Unified Memory (GB10/DGX)",
   amd_datacenter: "AMD Instinct",
 };
 
@@ -95,6 +97,33 @@ function applePreset(args: {
   /** RAM type as printed by Apple ("LPDDR5", "LPDDR5X"). */
   ramType: string;
 }): HardwarePreset {
+  return unifiedMemoryPreset(args);
+}
+
+/**
+ * Shared shape for unified-memory systems (Apple Silicon, NVIDIA GB10 /
+ * DGX Spark). On these chips the GPU reads weights from the same LPDDR5(X)
+ * pool as the CPU, so `gpuBandwidth` is meaningless — `calcValueScore`
+ * must take the RAM-bandwidth branch (see `hasGPU` check in
+ * `calculator.ts`). 60% efficiency mirrors the LLM-inference utilisation
+ * measured on Apple unified memory; the DGX Spark hits roughly the same
+ * fraction of its 273 GB/s peak in published vLLM/llama.cpp benchmarks.
+ */
+function unifiedMemoryPreset(args: {
+  id: string;
+  category:
+    | "apple_silicon_max"
+    | "apple_silicon_ultra"
+    | "nvidia_unified";
+  label: string;
+  cpuModel: string;
+  /** Unified memory bandwidth in GB/s. */
+  bandwidthGBs: number;
+  /** Max unified memory size in GB for this chip. */
+  maxRamGb: number;
+  /** RAM type as printed on the datasheet ("LPDDR5", "LPDDR5X"). */
+  ramType: string;
+}): HardwarePreset {
   return {
     id: args.id,
     category: args.category,
@@ -105,8 +134,8 @@ function applePreset(args: {
       ramType: args.ramType,
       ramBandwidthGBs: String(args.bandwidthGBs),
       availableRam: String(args.maxRamGb),
-      // Apple Silicon: no discrete GPU. Explicitly zero out the GPU
-      // block so `calcValueScore` takes the RAM-bandwidth branch in
+      // No discrete GPU. Explicitly zero out the GPU block so
+      // `calcValueScore` takes the RAM-bandwidth branch in
       // `calculator.ts` (see `hasGPU` check around line 298).
       gpuCount: "0",
       gpuVram: "0",
@@ -248,6 +277,24 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     cpuModel: "Apple M3 Ultra",
     bandwidthGBs: 819,
     maxRamGb: 512,
+    ramType: "LPDDR5X",
+  }),
+
+  // ── NVIDIA Unified Memory (GB10 / DGX Spark) ─────────────────────────
+  // DGX Spark is NVIDIA's first GB10 Grace Blackwell "AI appliance" —
+  // 20-core Arm CPU + Blackwell GPU sharing a single 128 GB LPDDR5X pool
+  // at 273 GB/s. The full pool is addressable from either CPU or GPU
+  // without static partitioning, so it slots into the unified-memory
+  // calculator branch (like Apple Silicon) rather than the discrete-GPU
+  // branch — the 273 GB/s bandwidth is what gates inference, not the
+  // Blackwell GPU's nominal HBM bandwidth (which it does not have).
+  unifiedMemoryPreset({
+    id: "nvidia-dgx-spark",
+    category: "nvidia_unified",
+    label: "NVIDIA DGX Spark (GB10)",
+    cpuModel: "NVIDIA GB10 Grace Blackwell",
+    bandwidthGBs: 273,
+    maxRamGb: 128,
     ramType: "LPDDR5X",
   }),
 

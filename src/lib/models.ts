@@ -20,6 +20,7 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Cohere", label: "Cohere" },
   { key: "InclusionAI", label: "InclusionAI (Ant Group)" },
   { key: "Xiaomi", label: "Xiaomi MiMo" },
+  { key: "LG", label: "LG EXAONE" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -1216,6 +1217,29 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // ── LG AI Research — EXAONE 4.5 (hybrid SWA + global, VLM) ────────────
+  // EXAONE 4.5 33B (model_type exaone4_5): dense multimodal model wrapping
+  // an Exaone4ForCausalLM text core inside an Exaone4_5_ForConditionalGeneration
+  // VLM head. Sliding-window/full pattern "LLLG" repeating across 64 layers
+  // → every 4th layer is global full-attention (16 full + 48 sliding,
+  // sliding_window=4096). num_key_value_heads=8, head_dim=128
+  // (hidden 5120 / 40 attention heads). vision_config present → VLM.
+  // 256K context via YaRN (max_position_embeddings 262144).
+  "exaone-4.5-33b": {
+    displayName: "EXAONE 4.5 33B",
+    brand: "LG",
+    hfRepoId: "LGAI-EXAONE/EXAONE-4.5-33B",
+    params: 34.35e9, // safetensors total params from HF API
+    layers: 64,
+    kvHeads: 8,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 16,
+    slidingWindow: 4096,
+    moe: false,
+    maxContextK: 256,
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
 };
 
 /**
@@ -1297,6 +1321,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "ring-2.6-1t": "2026-05-14",
   "ling-2.6-1t": "2026-04-29",
   "mimo-v2.5-pro": "2026-04-27",
+  "exaone-4.5-33b": "2026-04-04",
 };
 
 /**
