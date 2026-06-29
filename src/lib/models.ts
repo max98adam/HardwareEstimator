@@ -980,6 +980,30 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 198, // max_position_embeddings 202752 / 1024
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // GLM-5.2 (model_type glm_moe_dsa): same MLA + DSA architecture as GLM-5.1
+  // (78 layers, kv_lora_rank=512, qk_rope_head_dim=64, 256 routed experts +
+  // 1 shared, 8 active per token) — the headline upgrade is a usable 1M
+  // context window (max_position_embeddings 1048576 vs 5.1's 202752) plus a
+  // reworked IndexShare DSA that reuses the same indexer across every 4
+  // sparse layers, cutting per-token FLOPs ~3× at 1M ctx. Reasoning effort
+  // selectable (high / max). MIT-licensed. Safetensors total is 753B; we use
+  // ~41B active, same as 5.1 since the MoE layout is unchanged.
+  "glm-5.2": {
+    displayName: "GLM-5.2 753B-A41B (MoE)",
+    brand: "Zhipu",
+    hfRepoId: "zai-org/GLM-5.2",
+    params: 753e9,
+    activeParams: 41e9,
+    layers: 78,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // ── MiniMax ───────────────────────────────────────────────────────
   // MiniMax-M3 (model_type minimax_m3_vl): introduces MiniMax Sparse Attention
   // (MSA) — block-sparse top-k (16 blocks of 128 tokens) over standard GQA on
@@ -1247,7 +1271,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-06-15.
+ * Fetched 2026-06-29.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1309,6 +1333,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "glm-4.7-flash": "2026-01-19",
   "glm-4.7": "2025-12-22",
   "glm-5.1": "2026-04-03",
+  "glm-5.2": "2026-06-16",
   "minimax-m1": "2025-06-13",
   "minimax-m2": "2025-10-22",
   "minimax-m2.5": "2026-02-12",
@@ -1333,7 +1358,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-06-15.
+ * Fetched 2026-06-29.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1365,9 +1390,10 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "glm-4.5-air": "OnFinanceAI/GLM-4.5-Air-FP4",
   "glm-4.6": "RedHatAI/GLM-4.6-NVFP4",
   "glm-5.1": "nvidia/GLM-5.1-NVFP4",
+  "glm-5.2": "nvidia/GLM-5.2-NVFP4",
   "minimax-m2.5": "RedHatAI/MiniMax-M2.5-NVFP4",
   "minimax-m2.7": "nvidia/MiniMax-M2.7-NVFP4",
-  "minimax-m3": "brandonmusic/MiniMax-M3-NVFP4",
+  "minimax-m3": "nvidia/MiniMax-M3-NVFP4",
 };
 
 /**
@@ -1381,7 +1407,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
  * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
  * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
  * catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-06-16.
+ * Fetched 2026-06-29.
  */
 export const MODEL_FP8_REPOS: Record<string, string> = {
   // Native FP8 — main repos ship as FP8 / FP8-Block
@@ -1419,6 +1445,7 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "glm-4.6": "zai-org/GLM-4.6-FP8",
   "glm-4.7": "zai-org/GLM-4.7-FP8",
   "glm-5.1": "zai-org/GLM-5.1-FP8",
+  "glm-5.2": "zai-org/GLM-5.2-FP8",
   "command-a-plus-2026": "CohereLabs/command-a-plus-05-2026-FP8",
   "north-mini-code-1": "CohereLabs/North-Mini-Code-1.0-FP8",
   "exaone-4.5-33b": "LGAI-EXAONE/EXAONE-4.5-33B-FP8",
