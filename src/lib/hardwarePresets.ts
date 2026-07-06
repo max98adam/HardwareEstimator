@@ -362,6 +362,20 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 8000,
     memoryType: "HBM3e",
   }),
+  // NVIDIA Rubin R200 (Vera Rubin platform): first NVIDIA GPU with HBM4,
+  // 288 GB across 8 stacks at 22 TB/s — nearly 3× B300's bandwidth. Two
+  // near-reticle compute dies on TSMC N3P (336B transistors), NVLink 6
+  // at 3.6 TB/s per GPU. Entered production at GTC Taipei 2026-06-01;
+  // partner shipments via AWS/Azure/GCP/OCI/CoreWeave begin H2 2026.
+  gpuPreset({
+    id: "r200",
+    category: "nvidia_datacenter",
+    label: "NVIDIA Rubin R200 288GB (Vera Rubin)",
+    gpuInfo: "Rubin R200 288GB",
+    vramGb: 288,
+    bandwidthGBs: 22000,
+    memoryType: "HBM4",
+  }),
 
   // ── NVIDIA RTX PRO (Workstation) ──────────────────────────────────────
   // RTX PRO 6000 Blackwell family — all three editions share 96 GB GDDR7

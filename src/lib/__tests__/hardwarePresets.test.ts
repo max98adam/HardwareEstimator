@@ -239,6 +239,7 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["h200", "4800"],
     ["b200", "8000"],
     ["b300", "8000"],
+    ["r200", "22000"],
     ["rtx-4090", "1008"],
     ["rtx-5090", "1792"],
     ["rtx-pro-6000-blackwell", "1792"],
