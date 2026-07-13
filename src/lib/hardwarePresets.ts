@@ -362,6 +362,22 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 8000,
     memoryType: "HBM3e",
   }),
+  // NVIDIA Rubin R100 (also branded "H300" by hyperscalers): first Rubin-
+  // generation datacenter GPU. Moves from Blackwell's HBM3e to HBM4, keeping
+  // 288 GB per GPU but ~2.75× the per-GPU bandwidth (22 TB/s vs 8 TB/s on
+  // B300). NVIDIA GTC 2026 announced Vera Rubin platforms with H2 2026
+  // availability, and first-customer shipments to hyperscalers (AWS, Google,
+  // Azure, CoreWeave, Lambda, Nebius, Nscale) began summer 2026 — so the R100
+  // is the current top-end datacenter part.
+  gpuPreset({
+    id: "rubin-r100",
+    category: "nvidia_datacenter",
+    label: "NVIDIA Rubin R100 288GB (H300)",
+    gpuInfo: "Rubin R100 288GB",
+    vramGb: 288,
+    bandwidthGBs: 22000,
+    memoryType: "HBM4",
+  }),
 
   // ── NVIDIA RTX PRO (Workstation) ──────────────────────────────────────
   // RTX PRO 6000 Blackwell family — all three editions share 96 GB GDDR7
@@ -466,6 +482,21 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     vramGb: 288,
     bandwidthGBs: 8000,
     memoryType: "HBM3e",
+  }),
+  // AMD Instinct MI455X (CDNA5, MI400 series): flagship training+inference
+  // accelerator unveiled at CES 2026 with H2 2026 availability. Moves from
+  // HBM3e to HBM4 and pushes both the memory pool and its bandwidth well
+  // beyond the MI355X — 432 GB (1.5× MI355X's 288 GB) at 19.6 TB/s (~2.45×
+  // MI355X's 8 TB/s). AMD lists the same package hitting 40 PFLOPS FP4 /
+  // 20 PFLOPS FP8, positioned directly against NVIDIA's Rubin R100.
+  gpuPreset({
+    id: "mi455x",
+    category: "amd_datacenter",
+    label: "AMD Instinct MI455X (CDNA5)",
+    gpuInfo: "MI455X 432GB",
+    vramGb: 432,
+    bandwidthGBs: 19600,
+    memoryType: "HBM4",
   }),
 ];
 

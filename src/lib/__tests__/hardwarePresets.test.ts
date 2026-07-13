@@ -239,6 +239,7 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["h200", "4800"],
     ["b200", "8000"],
     ["b300", "8000"],
+    ["rubin-r100", "22000"],
     ["rtx-4090", "1008"],
     ["rtx-5090", "1792"],
     ["rtx-pro-6000-blackwell", "1792"],
@@ -248,6 +249,7 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["mi300x", "5300"],
     ["mi325x", "6000"],
     ["mi355x", "8000"],
+    ["mi455x", "19600"],
   ];
 
   it.each(expected)(

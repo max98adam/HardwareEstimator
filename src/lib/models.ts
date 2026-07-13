@@ -576,6 +576,28 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256, // max_position_embeddings 262144 / 1024
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // Leanstral 1.5 (Mistral, Apache-2.0): a lean 119B-A6B MLA-MoE VLM built on
+  // top of the Leanstral-2603 base. Same MLA cache layout as Mistral Small 4
+  // (kv_lora_rank=256, qk_rope_head_dim=64) but Apache-2.0 licensed and
+  // natively FP8 (fp8_e4m3). 36 layers, 128 routed experts + 1 shared, 4
+  // active per token. Vision encoder wrapper → multimodal. Native 1M context
+  // (max_position_embeddings 1048576, YaRN factor 128 over an 8K base).
+  "leanstral-1.5": {
+    displayName: "Leanstral 1.5 119B-A6B (MoE)",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Leanstral-1.5-119B-A6B",
+    params: 119e9,
+    activeParams: 6e9,
+    layers: 36,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 256, // matches Mistral Small 4's smaller MLA latent
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
   "mixtral-8x7b": {
     displayName: "Mixtral 8x7B-A13B (MoE)",
     brand: "Mistral",
@@ -1308,6 +1330,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mistral-large-3": "2025-11-28",
   "mistral-small-4": "2026-01-23",
   "devstral-2-123b": "2025-11-28",
+  "leanstral-1.5": "2026-07-01",
   "mixtral-8x7b": "2023-12-01",
   "mixtral-8x22b": "2024-04-16",
   "phi-3.5-mini": "2024-08-16",
@@ -1433,6 +1456,8 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "mistral-small-24b": "RedHatAI/Mistral-Small-24B-Instruct-2501-FP8-dynamic",
   "mistral-large-3": "mistralai/Mistral-Large-3-675B-Instruct-2512-FP8",
   "devstral-2-123b": "mistralai/Devstral-2-123B-Instruct-2512-FP8",
+  // Leanstral 1.5 ships natively FP8 (params.json qformat_weight=fp8_e4m3).
+  "leanstral-1.5": "mistralai/Leanstral-1.5-119B-A6B",
   "gemma3-27b": "RedHatAI/gemma-3-27b-it-FP8-dynamic",
   "gemma4-12b": "RedHatAI/gemma-4-12B-it-FP8-dynamic",
   "gemma4-26b-a4b": "RedHatAI/gemma-4-26B-A4B-it-FP8-dynamic",
