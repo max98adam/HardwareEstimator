@@ -26,7 +26,8 @@ export type ModelBrand =
   | "Cohere"
   | "InclusionAI"
   | "Xiaomi"
-  | "LG";
+  | "LG"
+  | "ThinkingMachines";
 
 /**
  * Architecture parameters of a model.

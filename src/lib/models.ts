@@ -21,6 +21,7 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "InclusionAI", label: "InclusionAI (Ant Group)" },
   { key: "Xiaomi", label: "Xiaomi MiMo" },
   { key: "LG", label: "LG EXAONE" },
+  { key: "ThinkingMachines", label: "Thinking Machines" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -1285,6 +1286,41 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
+  // ── Thinking Machines (Mira Murati's lab) — Inkling (hybrid SWA + global MoE) ──
+  // Inkling (model_type inkling_mm_model, InklingForConditionalGeneration): first
+  // frontier-scale open-weight MoE from Thinking Machines. Text-config verified
+  // against config.json on Hugging Face:
+  //   - num_hidden_layers 66. `local_layer_ids` lists 55 SWA layers, so the 11
+  //     remaining are global full-attention (indices 5, 11, 17, 23, 29, 35, 41,
+  //     47, 53, 59, 65 — an every-6th-layer pattern) → hybrid, fullLayers=11.
+  //   - SWA layers (`swa_num_key_value_heads`=16, `swa_head_dim`=128,
+  //     `sliding_window_size`=512) go on the base `kvHeads`/`headDim`/`sliding
+  //     Window` slots — matching how Gemma 4 12B encodes its SWA vs full mix.
+  //   - Global layers (`num_key_value_heads`=8, `head_dim`=128) go on
+  //     `fullKvHeads`/`fullHeadDim`.
+  //   - 256 routed experts + 2 shared, num_experts_per_tok=6.
+  //   - model_max_length 1048576 → 1024K context.
+  //   - Wrapper config has vision_config + audio_config (VLM + audio-in).
+  // Total params from safetensors: ~952B (bf16). Active is the widely reported
+  // ~41B (top-6 of 256 routed + 2 shared, evenly ≈ 8/258 of MoE mass). Apache-2.0.
+  "inkling": {
+    displayName: "Inkling 952B-A41B (MoE, hybrid)",
+    brand: "ThinkingMachines",
+    hfRepoId: "thinkingmachines/Inkling",
+    params: 952e9,
+    activeParams: 41e9,
+    layers: 66,
+    kvHeads: 16, // SWA layers: swa_num_key_value_heads
+    headDim: 128, // SWA layers: swa_head_dim
+    kvFormula: "hybrid",
+    fullLayers: 11, // global full-attention layers (66 − 55 SWA in local_layer_ids)
+    fullKvHeads: 8, // global layers: num_key_value_heads
+    fullHeadDim: 128, // global layers: head_dim
+    slidingWindow: 512,
+    moe: true,
+    maxContextK: 1024, // model_max_length 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
 };
 
 /**
@@ -1369,6 +1405,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "ling-2.6-1t": "2026-04-29",
   "mimo-v2.5-pro": "2026-04-27",
   "exaone-4.5-33b": "2026-04-04",
+  "inkling": "2026-07-14",
 };
 
 /**
@@ -1416,6 +1453,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "minimax-m2.5": "RedHatAI/MiniMax-M2.5-NVFP4",
   "minimax-m2.7": "nvidia/MiniMax-M2.7-NVFP4",
   "minimax-m3": "brandonmusic/MiniMax-M3-NVFP4",
+  "inkling": "thinkingmachines/Inkling-NVFP4",
 };
 
 /**
