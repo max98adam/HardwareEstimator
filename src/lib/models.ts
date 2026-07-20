@@ -22,6 +22,7 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Xiaomi", label: "Xiaomi MiMo" },
   { key: "LG", label: "LG EXAONE" },
   { key: "ThinkingMachines", label: "Thinking Machines" },
+  { key: "Tencent", label: "Tencent Hunyuan" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -1321,6 +1322,44 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024, // model_max_length 1048576 / 1024
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // ── Tencent — Hunyuan (standard GQA MoE) ──────────────────────────
+  // Hunyuan-A13B (model_type hunyuan_v1_moe): Tencent's popular smaller
+  // MoE — plain GQA (kvHeads=8, headDim=128), 32 layers, 64 routed experts
+  // + 1 shared per layer, top-8 active per token (≈13B active). 32K native
+  // context. Text-only. Apache-2.0.
+  "hunyuan-a13b": {
+    displayName: "Hunyuan A13B 80B-A13B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hunyuan-A13B-Instruct",
+    params: 80e9, // safetensors total 80.39B
+    activeParams: 13e9,
+    layers: 32,
+    kvHeads: 8,
+    headDim: 128,
+    moe: true,
+    maxContextK: 32,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // Hunyuan Hy3 (model_type hy_v3, HYV3ForCausalLM): Tencent's frontier
+  // agentic MoE. Plain GQA (kvHeads=8, headDim=128) on 80 layers, 192
+  // routed experts + 1 shared, top-8 active per token (≈21B active out of
+  // ~295B total). first_k_dense_replace=1, one MTP head
+  // (num_nextn_predict_layers=1). 256K native context
+  // (max_position_embeddings 262144). Reasoning-mode toggle (low/high),
+  // text-only, Apache-2.0.
+  "hunyuan-hy3": {
+    displayName: "Hunyuan Hy3 295B-A21B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hy3",
+    params: 295e9,
+    activeParams: 21e9,
+    layers: 80,
+    kvHeads: 8,
+    headDim: 128,
+    moe: true,
+    maxContextK: 256,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
 };
 
 /**
@@ -1406,6 +1445,8 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mimo-v2.5-pro": "2026-04-27",
   "exaone-4.5-33b": "2026-04-04",
   "inkling": "2026-07-14",
+  "hunyuan-a13b": "2025-06-25",
+  "hunyuan-hy3": "2026-07-02",
 };
 
 /**
@@ -1454,6 +1495,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "minimax-m2.7": "nvidia/MiniMax-M2.7-NVFP4",
   "minimax-m3": "brandonmusic/MiniMax-M3-NVFP4",
   "inkling": "thinkingmachines/Inkling-NVFP4",
+  "hunyuan-hy3": "kodelow/Hy3-NVFP4-W4A16",
 };
 
 /**
@@ -1513,6 +1555,8 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "exaone-4.5-33b": "LGAI-EXAONE/EXAONE-4.5-33B-FP8",
   "granite-4.1-8b": "ibm-granite/granite-4.1-8b-FP8",
   "granite-4.1-30b": "ibm-granite/granite-4.1-30b-FP8",
+  "hunyuan-a13b": "tencent/Hunyuan-A13B-Instruct-FP8",
+  "hunyuan-hy3": "tencent/Hy3-FP8",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel

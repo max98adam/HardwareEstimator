@@ -411,6 +411,32 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 1344,
     memoryType: "GDDR7",
   }),
+  // RTX PRO 4500 Blackwell (Workstation Edition, GB203): 32 GB GDDR7 ECC on
+  // a 256-bit bus at 28 Gbps → 896 GB/s. 10,496 CUDA cores, 200 W, single-slot.
+  // The Server Edition is a distinct SKU (800 GB/s) — not included; users who
+  // want it can bump the bandwidth down after picking this preset.
+  gpuPreset({
+    id: "rtx-pro-4500-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 4500 Blackwell 32GB",
+    gpuInfo: "RTX PRO 4500 Blackwell 32GB",
+    vramGb: 32,
+    bandwidthGBs: 896,
+    memoryType: "GDDR7",
+  }),
+  // RTX PRO 4000 Blackwell (Workstation Edition, GB203): entry-tier RTX PRO
+  // Blackwell — 24 GB GDDR7 ECC on a 192-bit bus at 28 Gbps → 672 GB/s. 8,960
+  // CUDA cores, 140 W, single-slot. Positioned below the 5000 series but keeps
+  // 24 GB VRAM for local LLM inference.
+  gpuPreset({
+    id: "rtx-pro-4000-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 4000 Blackwell 24GB",
+    gpuInfo: "RTX PRO 4000 Blackwell 24GB",
+    vramGb: 24,
+    bandwidthGBs: 672,
+    memoryType: "GDDR7",
+  }),
   // RTX PRO 5000 Blackwell 72GB (launched Dec 2025): same GB202 silicon and
   // 384-bit GDDR7 bus as the 48 GB SKU — 24 × 3 GB GDDR7 modules in clamshell
   // at 28 Gbps → 1344 GB/s. The 50% larger VRAM matters for fitting bigger
