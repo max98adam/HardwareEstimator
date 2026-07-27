@@ -34,7 +34,9 @@ export type HardwareCategory =
   | "nvidia_workstation"
   | "nvidia_consumer"
   | "nvidia_unified"
-  | "amd_datacenter";
+  | "amd_datacenter"
+  | "amd_workstation"
+  | "intel_datacenter";
 
 /** Human-readable labels for each category, in display order. */
 export const HARDWARE_CATEGORY_LABELS: Record<HardwareCategory, string> = {
@@ -45,6 +47,8 @@ export const HARDWARE_CATEGORY_LABELS: Record<HardwareCategory, string> = {
   nvidia_consumer: "NVIDIA Consumer",
   nvidia_unified: "NVIDIA Unified Memory (GB10/DGX)",
   amd_datacenter: "AMD Instinct",
+  amd_workstation: "AMD Radeon AI PRO (Workstation)",
+  intel_datacenter: "Intel Gaudi",
 };
 
 /**
@@ -171,7 +175,9 @@ function gpuPreset(args: {
     | "nvidia_datacenter"
     | "nvidia_workstation"
     | "nvidia_consumer"
-    | "amd_datacenter";
+    | "amd_datacenter"
+    | "amd_workstation"
+    | "intel_datacenter";
   label: string;
   /** GPU model identifier as printed on the box (used for `gpuInfo`). */
   gpuInfo: string;
@@ -425,6 +431,31 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 1344,
     memoryType: "GDDR7",
   }),
+  // RTX PRO 4000 Blackwell (SFF): mid-range workstation Blackwell — 24 GB
+  // GDDR7 on a 192-bit bus at 28 Gbps → 672 GB/s, single-slot 145 W. Popular
+  // pick for local 8–14B models when 96 GB RTX PRO 6000 is overkill.
+  gpuPreset({
+    id: "rtx-pro-4000-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 4000 Blackwell",
+    gpuInfo: "RTX PRO 4000 Blackwell 24GB",
+    vramGb: 24,
+    bandwidthGBs: 672,
+    memoryType: "GDDR7",
+  }),
+  // RTX PRO 2000 Blackwell: entry-tier workstation Blackwell — 16 GB GDDR7 on
+  // a 128-bit bus at 18 Gbps → 288 GB/s, low-profile 70 W. Bandwidth-limited
+  // for anything above ~7B, but the smallest single-slot card that can host a
+  // 4-bit quant of a 7–13B model.
+  gpuPreset({
+    id: "rtx-pro-2000-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 2000 Blackwell",
+    gpuInfo: "RTX PRO 2000 Blackwell 16GB",
+    vramGb: 16,
+    bandwidthGBs: 288,
+    memoryType: "GDDR7",
+  }),
 
   // ── NVIDIA Consumer ───────────────────────────────────────────────────
   gpuPreset({
@@ -497,6 +528,37 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     vramGb: 432,
     bandwidthGBs: 19600,
     memoryType: "HBM4",
+  }),
+
+  // ── AMD Radeon AI PRO (Workstation) ──────────────────────────────────
+  // AMD Radeon AI PRO R9700 (RDNA 4, Navi 48): AMD's first workstation card
+  // pitched explicitly at local LLM inference — 32 GB GDDR6 on a 256-bit bus
+  // at 20 Gbps → 640 GB/s, dual-slot 300 W. Widely available since Jul 2025.
+  // Twice the VRAM of a 4090/5090 on a similar-tier bandwidth budget makes it
+  // the go-to non-NVIDIA workstation option for 30–70B FP8 quants.
+  gpuPreset({
+    id: "radeon-ai-pro-r9700",
+    category: "amd_workstation",
+    label: "AMD Radeon AI PRO R9700",
+    gpuInfo: "Radeon AI PRO R9700 32GB",
+    vramGb: 32,
+    bandwidthGBs: 640,
+    memoryType: "GDDR6",
+  }),
+
+  // ── Intel Gaudi (Data Center) ────────────────────────────────────────
+  // Intel Gaudi 3 (HL-325L OAM / PCIe): first inference-oriented Gaudi with
+  // 128 GB HBM2e at 3.7 TB/s on the OAM mezzanine card. Positioned between
+  // NVIDIA H100 and H200 on memory bandwidth, with the same 128 GB pool as
+  // H200's 141 GB. Wide OEM availability (Dell, Supermicro, HPE) since 2025.
+  gpuPreset({
+    id: "gaudi-3",
+    category: "intel_datacenter",
+    label: "Intel Gaudi 3",
+    gpuInfo: "Gaudi 3 128GB",
+    vramGb: 128,
+    bandwidthGBs: 3700,
+    memoryType: "HBM2e",
   }),
 ];
 

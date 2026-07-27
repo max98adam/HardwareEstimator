@@ -22,6 +22,9 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Xiaomi", label: "Xiaomi MiMo" },
   { key: "LG", label: "LG EXAONE" },
   { key: "ThinkingMachines", label: "Thinking Machines" },
+  { key: "Sber", label: "Sber GigaChat" },
+  { key: "Tencent", label: "Tencent Hunyuan" },
+  { key: "Meituan", label: "Meituan LongCat" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -1321,6 +1324,84 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024, // model_max_length 1048576 / 1024
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // ── Sber — GigaChat (hybrid MLA + Gated DeltaNet linear MoE) ──────
+  // GigaChat 3.5 Ultra (model_type gigachat3_5): first open-weight release from
+  // Sber. Hybrid stack — MLA latent attention on 10 layers (indices 3, 7, 11,
+  // …, 39 = every 4th layer per `full_attention_layers`), Gated DeltaNet
+  // linear attention on the other 30. MoE: 256 routed + 1 shared, 8 active per
+  // token, first_k_dense_replace=3. MTP with 2 next-token heads. Natively FP8
+  // (fp8_e4m3, weight_block_size 128×128); bf16 checkpoint also published.
+  // 256K native context (max_position_embeddings 262144 via YaRN factor 8 over
+  // an original 32K base). MIT license. Text-only.
+  // Only the 10 MLA "full" layers grow a real KV cache — the Gated DeltaNet
+  // layers carry ≈0 cache — so this maps to `linear_hybrid` with the MLA
+  // latent encoded as a single (kv_lora_rank + qk_rope = 576)-wide "head",
+  // kvFactor=1 (latent stores K and V jointly), fullLayers=10.
+  "gigachat-3.5-ultra": {
+    displayName: "GigaChat 3.5 Ultra 432B-A28B (MoE, hybrid)",
+    brand: "Sber",
+    hfRepoId: "ai-sage/GigaChat3.5-432B-A28B",
+    params: 432e9,
+    activeParams: 28e9,
+    layers: 40,
+    kvHeads: 1,
+    headDim: 576, // kv_lora_rank 512 + qk_rope_head_dim 64 (MLA latent)
+    kvFormula: "linear_hybrid",
+    fullLayers: 10,
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // ── Tencent — Hunyuan (Hy3 standard GQA MoE) ──────────────────────
+  // Hy3 (model_type hy_v3): plain GQA MoE from Tencent (Apache-2.0). 80 layers,
+  // num_attention_heads=64, num_key_value_heads=8, head_dim=128 → clean
+  // `standard` formula. 192 routed experts + 1 shared, top-8 (num_experts_per_
+  // tok=8), first_k_dense_replace=1 (first layer dense). Adds 1 MTP head
+  // (num_nextn_predict_layers=1). 256K native context (max_position_embeddings
+  // 262144). Text-only. ~295B total / ~21B active per the model card.
+  "hunyuan-hy3": {
+    displayName: "Hunyuan Hy3 295B-A21B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hy3",
+    params: 295e9,
+    activeParams: 21e9,
+    layers: 80,
+    kvHeads: 8,
+    headDim: 128,
+    moe: true,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // ── Meituan — LongCat (MLA + sparse-index attention, ultra-sparse MoE) ──
+  // LongCat-2.0 (architectures: LongcatCausalLM): MIT-licensed 1.6T-A48B MoE
+  // from Meituan. Uses DeepSeek-style MLA latent attention (kv_lora_rank=512,
+  // qk_rope_head_dim=64, attention_method="MLA") layered under LongCat Sparse
+  // Attention — a top-k (index_topk=2048) block-sparse indexer over the MLA
+  // cache, analogous to DeepSeek V3.2's DSA. Total params include a ~135B
+  // N-gram embedding module ("OE": oe_vocab_size_ratio=100.567); 768 routed
+  // experts + 128 "zero" identity experts, top-12 routing (moe_topk=12); 3-step
+  // MTP head (mtp_num_layers=3). 256K context (max_position_embeddings 262144,
+  // DeepSeek-YaRN factor 120 over an 8K base). 38 layers.
+  // We model it as plain `mla` — the sparse indexer only shrinks the effective
+  // KV footprint further at long context, so straight MLA is a safe upper bound
+  // (same rationale as DeepSeek V3.2 and GLM-5.x with DSA).
+  "longcat-2.0": {
+    displayName: "LongCat 2.0 1.6T-A48B (MoE)",
+    brand: "Meituan",
+    hfRepoId: "meituan-longcat/LongCat-2.0",
+    params: 1.6e12,
+    activeParams: 48e9,
+    layers: 38,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
 };
 
 /**
@@ -1328,7 +1409,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-06-15.
+ * Fetched 2026-07-27.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1406,6 +1487,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mimo-v2.5-pro": "2026-04-27",
   "exaone-4.5-33b": "2026-04-04",
   "inkling": "2026-07-14",
+  "gigachat-3.5-ultra": "2026-07-05",
+  "hunyuan-hy3": "2026-07-02",
+  "longcat-2.0": "2026-07-05",
 };
 
 /**
@@ -1417,7 +1501,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-06-15.
+ * Fetched 2026-07-27.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1467,7 +1551,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
  * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
  * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
  * catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-06-16.
+ * Fetched 2026-07-27.
  */
 export const MODEL_FP8_REPOS: Record<string, string> = {
   // Native FP8 — main repos ship as FP8 / FP8-Block
@@ -1496,6 +1580,9 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "devstral-2-123b": "mistralai/Devstral-2-123B-Instruct-2512-FP8",
   // Leanstral 1.5 ships natively FP8 (params.json qformat_weight=fp8_e4m3).
   "leanstral-1.5": "mistralai/Leanstral-1.5-119B-A6B",
+  // GigaChat 3.5 Ultra ships natively FP8 (quantization_config.quant_method=fp8,
+  // fmt=e4m3, weight_block_size 128×128).
+  "gigachat-3.5-ultra": "ai-sage/GigaChat3.5-432B-A28B",
   "gemma3-27b": "RedHatAI/gemma-3-27b-it-FP8-dynamic",
   "gemma4-12b": "RedHatAI/gemma-4-12B-it-FP8-dynamic",
   "gemma4-26b-a4b": "RedHatAI/gemma-4-26B-A4B-it-FP8-dynamic",

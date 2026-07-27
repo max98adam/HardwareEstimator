@@ -155,8 +155,11 @@ describe("HARDWARE_PRESETS — discrete GPU presets", () => {
   const gpuPresets = HARDWARE_PRESETS.filter(
     (p) =>
       p.category === "nvidia_datacenter" ||
+      p.category === "nvidia_workstation" ||
       p.category === "nvidia_consumer" ||
-      p.category === "amd_datacenter",
+      p.category === "amd_datacenter" ||
+      p.category === "amd_workstation" ||
+      p.category === "intel_datacenter",
   );
 
   it("sets gpuCount=1 (single-card; user dials count manually)", () => {
@@ -246,10 +249,14 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["rtx-pro-6000-blackwell-server", "1597"],
     ["rtx-pro-5000-blackwell", "1344"],
     ["rtx-pro-5000-blackwell-72gb", "1344"],
+    ["rtx-pro-4000-blackwell", "672"],
+    ["rtx-pro-2000-blackwell", "288"],
     ["mi300x", "5300"],
     ["mi325x", "6000"],
     ["mi355x", "8000"],
     ["mi455x", "19600"],
+    ["radeon-ai-pro-r9700", "640"],
+    ["gaudi-3", "3700"],
   ];
 
   it.each(expected)(

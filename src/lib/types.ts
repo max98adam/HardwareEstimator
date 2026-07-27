@@ -27,7 +27,10 @@ export type ModelBrand =
   | "InclusionAI"
   | "Xiaomi"
   | "LG"
-  | "ThinkingMachines";
+  | "ThinkingMachines"
+  | "Sber"
+  | "Tencent"
+  | "Meituan";
 
 /**
  * Architecture parameters of a model.
