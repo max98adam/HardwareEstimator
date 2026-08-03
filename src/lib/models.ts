@@ -672,6 +672,31 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // Nemotron 3 Super (model_type nemotron_h): mid-tier sibling of the Ultra.
+  // Same Mamba-2 + MoE + selective full-attention recipe (`hybrid_override_
+  // pattern` = "MEMEMEM*EMEMEMEM*EMEMEMEM*EMEMEMEMEM*EMEMEMEMEM*EMEMEMEMEM*
+  // EMEMEMEMEM*EMEMEMEM*EMEMEMEME"), 88 transformer blocks of which only 8
+  // are attention (the * count) — the other 80 are Mamba (M) or MoE-only (E)
+  // and contribute ≈0 KV cache. kvHeads=2, headDim=128 on the attention
+  // layers. 512 routed experts + 1 shared, 22 active per token (≈12B active
+  // of 120B total). 256K native context (max_position_embeddings 262144).
+  // Base repo is Meta/NVIDIA gated → hfRepoId points at the public BF16
+  // mirror (same architecture verified from config.json).
+  "nemotron-3-super": {
+    displayName: "Nemotron 3 Super 120B-A12B (MoE, hybrid)",
+    brand: "NVIDIA",
+    hfRepoId: "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-BF16",
+    params: 120e9,
+    activeParams: 12e9,
+    layers: 88,
+    kvHeads: 2,
+    headDim: 128,
+    kvFormula: "linear_hybrid",
+    fullLayers: 8,
+    moe: true,
+    maxContextK: 256,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // ── DeepSeek (standard + MLA) ─────────────────────────────────────
   "deepseek-r1-distill-7b": {
     displayName: "DeepSeek R1 Distill 7B",
@@ -918,6 +943,34 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // Kimi K3 (model_type kimi_k3 wrapping kimi_linear text core): Moonshot's
+  // frontier flagship — 2.78T-parameter multimodal MoE natively quantized in
+  // MXFP4. Novel hybrid attention: 24 full MLA layers (kv_lora_rank=512,
+  // qk_rope_head_dim=64, v_head_dim=128) interleaved with 69 Kimi Delta
+  // Attention (KDA, linear ≈0 KV cache) layers across 93 hidden layers — the
+  // `linear_attn_config` in config.json enumerates them explicitly. Modeled as
+  // `linear_hybrid` with the 24 MLA layers encoded as a single-head latent
+  // (kvHeads=1, headDim=576 = 512 + 64, kvFactor=1) — same encoding as
+  // Kimi-Linear. 896 routed experts + 2 shared, num_experts_per_tok=6 (top-6
+  // routed). MoonViT-V2 vision encoder → multimodal (text+image+video). 1M
+  // context (max_position_embeddings 1048576). Total 2.8T / active ~104B from
+  // the model card.
+  "kimi-k3": {
+    displayName: "Kimi K3 2.8T-A104B (MoE, hybrid)",
+    brand: "Moonshot",
+    hfRepoId: "moonshotai/Kimi-K3",
+    params: 2.78e12,
+    activeParams: 104e9,
+    layers: 93,
+    kvHeads: 1,
+    headDim: 576, // kv_lora_rank 512 + qk_rope_head_dim 64 (MLA latent)
+    kvFormula: "linear_hybrid",
+    fullLayers: 24, // MLA full-attention layers (linear_attn_config.full_attn_layers)
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Z.ai (Zhipu) — GLM (standard GQA MoE, partial RoPE) ───────────
   "glm-4.5-air": {
     // The lighter, widely self-hosted GLM — 106B-A12B, 46 layers.
@@ -985,13 +1038,15 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
   // style sparse attention (DSA, index_topk=2048). Same MLA cache layout as
   // DeepSeek V3.2 / Kimi, so we model it as `mla` (a safe upper bound on KV —
   // the DSA sparsity only shrinks it further at long context). 78 layers,
-  // 256 routed experts + 1 shared, 8 active. Total/active params are computed
-  // from config (≈743B transformer-proper, ≈41B active) — not in the card.
+  // 256 routed experts + 1 shared, 8 active. Total ~754B from the safetensors
+  // BF16 mirror (very close to GLM-5.2's 753B; the two share the same MoE
+  // layout, differ only in dense-layer count and context window). Active
+  // ≈41B, computed from the config layout.
   "glm-5.1": {
-    displayName: "GLM-5.1 743B-A41B (MoE)",
+    displayName: "GLM-5.1 754B-A41B (MoE)",
     brand: "Zhipu",
     hfRepoId: "zai-org/GLM-5.1",
-    params: 743e9,
+    params: 754e9,
     activeParams: 41e9,
     layers: 78,
     kvHeads: 0,
@@ -1286,6 +1341,30 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
+  // K-EXAONE 2.0 750B-A37B (model_type exaone_moe): LG's frontier open MoE.
+  // Hybrid sliding-window/full pattern — 20 of 78 layers are full attention
+  // (indices 0, 5, 9, 13, …, 77) and the remaining 58 are sliding attention
+  // with window=128 (one layer at index 1 uses window=4096; we simplify with
+  // the dominant 128-token window). kvHeads=8, headDim=128 (hidden 6144 /
+  // 64 attention heads). 256 routed experts + 1 shared, 8 routed active per
+  // token → ~37B active from the model name. 256K native context
+  // (max_position_embeddings 262144). Text-only.
+  "k-exaone-2-750b": {
+    displayName: "K-EXAONE 2.0 750B-A37B (MoE)",
+    brand: "LG",
+    hfRepoId: "LGAI-EXAONE/K-EXAONE-2.0-750B-A37B",
+    params: 750e9, // safetensors BF16 total 749.4B, rounded to match model name
+    activeParams: 37e9,
+    layers: 78,
+    kvHeads: 8,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 20,
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // ── Thinking Machines (Mira Murati's lab) — Inkling (hybrid SWA + global MoE) ──
   // Inkling (model_type inkling_mm_model, InklingForConditionalGeneration): first
   // frontier-scale open-weight MoE from Thinking Machines. Text-config verified
@@ -1316,6 +1395,36 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     fullLayers: 11, // global full-attention layers (66 − 55 SWA in local_layer_ids)
     fullKvHeads: 8, // global layers: num_key_value_heads
     fullHeadDim: 128, // global layers: head_dim
+    slidingWindow: 512,
+    moe: true,
+    maxContextK: 1024, // model_max_length 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  // Inkling Small (model_type inkling_mm_model): smaller sibling of Inkling
+  // built on the same hybrid SWA + global MoE recipe. Text-config verified
+  // against config.json:
+  //   - num_hidden_layers 42. `local_layer_ids` lists 35 SWA layers, so the 7
+  //     remaining are global full-attention (indices 5, 11, 17, 23, 29, 35, 41
+  //     — every 6th layer) → hybrid, fullLayers=7.
+  //   - SWA and global layers share identical KV dims here (swa_num_key_value_
+  //     heads=8 == num_key_value_heads=8, both head_dim=128), so we don't need
+  //     to split fullKvHeads/fullHeadDim like the big Inkling does.
+  //   - 256 routed experts + 2 shared, num_experts_per_tok=6.
+  //   - model_max_length 1048576 → 1024K context.
+  //   - Wrapper config has vision_config + audio_config → VLM + audio-in.
+  // Total from safetensors ≈ 266B (bf16). Active ≈ 11B computed from the same
+  // MoE ratio as big Inkling (41/952 ≈ 4.3%). Apache-2.0.
+  "inkling-small": {
+    displayName: "Inkling Small 266B-A11B (MoE, hybrid)",
+    brand: "ThinkingMachines",
+    hfRepoId: "thinkingmachines/Inkling-Small",
+    params: 266e9,
+    activeParams: 11e9,
+    layers: 42,
+    kvHeads: 8, // SWA layers (== global layers here — same KV dims)
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 7, // global full-attention layers (42 − 35 SWA in local_layer_ids)
     slidingWindow: 512,
     moe: true,
     maxContextK: 1024, // model_max_length 1048576 / 1024
@@ -1372,6 +1481,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "phi-3.5-mini": "2024-08-16",
   "phi-4": "2024-12-11",
   "nemotron-3-ultra": "2026-06-03",
+  "nemotron-3-super": "2026-03-10",
   "deepseek-r1-distill-7b": "2025-01-20",
   "deepseek-r1-distill-14b": "2025-01-20",
   "deepseek-r1-distill-32b": "2025-01-20",
@@ -1386,6 +1496,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "kimi-linear-48b": "2025-10-30",
   "kimi-k2.6": "2026-04-14",
   "kimi-k2.7-code": "2026-06-11",
+  "kimi-k3": "2026-06-13",
   "glm-4.5-air": "2025-07-20",
   "glm-4.6": "2025-09-29",
   "glm-4.7-flash": "2026-01-19",
@@ -1405,7 +1516,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "ling-2.6-1t": "2026-04-29",
   "mimo-v2.5-pro": "2026-04-27",
   "exaone-4.5-33b": "2026-04-04",
+  "k-exaone-2-750b": "2026-07-29",
   "inkling": "2026-07-14",
+  "inkling-small": "2026-07-27",
 };
 
 /**
@@ -1439,6 +1552,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "mistral-large-3": "mistralai/Mistral-Large-3-675B-Instruct-2512-NVFP4",
   "mistral-small-4": "mistralai/Mistral-Small-4-119B-2603-NVFP4",
   "nemotron-3-ultra": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4",
+  "nemotron-3-super": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4",
   "deepseek-r1-distill-32b": "nm-testing/DeepSeek-R1-Distill-Qwen-32B-NVFP4",
   "deepseek-r1": "RedHatAI/DeepSeek-R1-NVFP4-FP8-BLOCK",
   "deepseek-v3.2": "RedHatAI/DeepSeek-V3.2-NVFP4-FP8-BLOCK",
@@ -1446,6 +1560,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "kimi-k2-thinking": "Abduali/Kimi-K2-Thinking-NVFP4",
   "kimi-linear-48b": "Firworks/Kimi-Linear-48B-A3B-Instruct-nvfp4",
   "kimi-k2.6": "RedHatAI/Kimi-K2.6-NVFP4",
+  "kimi-k3": "RedHatAI/Kimi-K3-NVFP4",
   "glm-4.5-air": "OnFinanceAI/GLM-4.5-Air-FP4",
   "glm-4.6": "RedHatAI/GLM-4.6-NVFP4",
   "glm-5.1": "nvidia/GLM-5.1-NVFP4",
@@ -1454,6 +1569,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "minimax-m2.7": "nvidia/MiniMax-M2.7-NVFP4",
   "minimax-m3": "brandonmusic/MiniMax-M3-NVFP4",
   "inkling": "thinkingmachines/Inkling-NVFP4",
+  "inkling-small": "thinkingmachines/Inkling-Small-NVFP4",
 };
 
 /**
@@ -1511,8 +1627,10 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "command-a-plus-2026": "CohereLabs/command-a-plus-05-2026-FP8",
   "north-mini-code-1": "CohereLabs/North-Mini-Code-1.0-FP8",
   "exaone-4.5-33b": "LGAI-EXAONE/EXAONE-4.5-33B-FP8",
+  "k-exaone-2-750b": "LGAI-EXAONE/K-EXAONE-2.0-750B-A37B-FP8",
   "granite-4.1-8b": "ibm-granite/granite-4.1-8b-FP8",
   "granite-4.1-30b": "ibm-granite/granite-4.1-30b-FP8",
+  "nemotron-3-super": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-FP8",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
