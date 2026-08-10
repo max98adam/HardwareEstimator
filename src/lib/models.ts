@@ -22,6 +22,7 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Xiaomi", label: "Xiaomi MiMo" },
   { key: "LG", label: "LG EXAONE" },
   { key: "ThinkingMachines", label: "Thinking Machines" },
+  { key: "Tencent", label: "Tencent Hunyuan" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -651,11 +652,12 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
   // ── NVIDIA Nemotron (Mamba-2 + MoE + selective attention) ─────────
   // Nemotron 3 Ultra (model_type nemotron_h): hybrid stack of Mamba-2
   // (constant-size SSM state), MoE MLP-only blocks, and a small number of
-  // selective full-attention layers. Of the 108 transformer blocks only 12
-  // are attention — the rest are Mamba or MoE-only and contribute ≈0 KV
-  // cache, so we model it with `linear_hybrid` (fullLayers=12). kvHeads=2,
-  // headDim=128 on the attention layers; 512 routed experts + 1 shared, 22
-  // active per token (≈55B active of 550B total). 256K native context
+  // selective full-attention layers. `layers_block_type` in config.json has
+  // 128 entries — 16 "a" (attention) + 112 "m" (mamba). Only the attention
+  // layers grow a KV cache; Mamba and MoE-only blocks contribute ≈0, so we
+  // model this with `linear_hybrid` (fullLayers=16). kvHeads=2, headDim=128
+  // on the attention layers; 512 routed experts + 1 shared, 22 active per
+  // token (≈55B active of 550B total). 256K native context
   // (max_position_embeddings 262144). OpenMDW-1.1 license.
   "nemotron-3-ultra": {
     displayName: "Nemotron 3 Ultra 550B-A55B (MoE, hybrid)",
@@ -663,11 +665,11 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     hfRepoId: "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16",
     params: 550e9,
     activeParams: 55e9,
-    layers: 108,
+    layers: 128,
     kvHeads: 2,
     headDim: 128,
     kvFormula: "linear_hybrid",
-    fullLayers: 12,
+    fullLayers: 16,
     moe: true,
     maxContextK: 256,
     capabilities: { vlm: false, thinking: true, toolUse: true },
@@ -916,6 +918,40 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     moe: true,
     activeParams: 32e9,
     maxContextK: 256,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  // Kimi K3 (model_type kimi_k3, KimiK3ForConditionalGeneration): Moonshot's
+  // first 2.8T-parameter frontier open-weight model. Architecture verified
+  // against the text_config in config.json on Hugging Face:
+  //   - num_hidden_layers=93. `linear_attn_config.full_attn_layers` lists 24
+  //     full-attention layer indices; the remaining 69 layers use Kimi Delta
+  //     Attention (KDA, linear, ≈0 KV cache) → `linear_hybrid` with
+  //     fullLayers=24.
+  //   - Full-attention layers use MLA: kv_lora_rank=512, qk_rope_head_dim=64
+  //     (plus mla_use_nope=true, mla_use_output_gate=true). Encoded like our
+  //     other MLA-in-hybrid models (Kimi-Linear): kvHeads=1, headDim=576
+  //     (=512+64), kvFactor=1 (latent jointly stores K and V).
+  //   - 896 routed experts + 2 shared, num_experts_per_token=16
+  //     (routed_expert_hidden_size=3584, moe_intermediate_size=3072). Widely
+  //     reported ~50B active per token.
+  //   - Ships natively in MXFP4 (compressed-tensors quantization_config in
+  //     config.json; ~4.25 bpw effective).
+  //   - vision_config present (KimiK3 wrapper) → VLM. 1M context
+  //     (max_position_embeddings=1048576).
+  "kimi-k3": {
+    displayName: "Kimi K3 2.8T-A50B (MoE, hybrid)",
+    brand: "Moonshot",
+    hfRepoId: "moonshotai/Kimi-K3",
+    params: 2.78e12,
+    activeParams: 50e9,
+    layers: 93,
+    kvHeads: 1,
+    headDim: 576, // kv_lora_rank 512 + qk_rope_head_dim 64 (MLA latent)
+    kvFormula: "linear_hybrid",
+    fullLayers: 24, // full_attn_layers count in linear_attn_config
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
   // ── Z.ai (Zhipu) — GLM (standard GQA MoE, partial RoPE) ───────────
@@ -1234,6 +1270,69 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // Ling 2.6 Flash (model_type bailing_hybrid, BailingMoeV2_5ForCausalLM):
+  // the "flash-scale" variant of the Ling 2.6 line. Unlike the 1T Ring/Ling
+  // pair (pure MLA), Ling-2.6-flash retrofits the base with a **hybrid MLA +
+  // Lightning Linear Attention** design at a 1:7 ratio. Architecture
+  // verified against config.json on Hugging Face:
+  //   - num_hidden_layers=32, layer_group_size=8 (four groups of 8) → 4 full
+  //     MLA layers + 28 Lightning-Linear layers.
+  //   - MLA on the full layers: kv_lora_rank=512, qk_rope_head_dim=64,
+  //     v_head_dim=128. Encoded the same way as Kimi-Linear / Kimi K3:
+  //     kvHeads=1, headDim=576 (=512+64), kvFactor=1.
+  //   - 256 routed experts + 1 shared, 8 experts per token. 104B total /
+  //     7.4B active per Ant Group's model card.
+  //   - 128K native context (max_position_embeddings 131072). Text-only.
+  //   - MIT license, ships an int4 checkpoint (inclusionAI/Ling-2.6-flash-int4)
+  //     for cost-efficient inference.
+  "ling-2.6-flash": {
+    displayName: "Ling 2.6 Flash 104B-A7B (MoE, hybrid)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ling-2.6-flash",
+    params: 104e9,
+    activeParams: 7.4e9,
+    layers: 32,
+    kvHeads: 1,
+    headDim: 576, // kv_lora_rank 512 + qk_rope_head_dim 64 (MLA latent)
+    kvFormula: "linear_hybrid",
+    fullLayers: 4, // 32 layers / layer_group_size 8 × 1 MLA per group
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 128, // max_position_embeddings 131072 / 1024
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // Ling 3.0 Flash (model_type bailing_hybrid, BailingMoeV3ForCausalLM): the
+  // Aug 2026 next-generation Ling-flash pretrained from scratch with a
+  // native **KDA + MLA** hybrid rather than retrofitted like 2.6-flash. 5:1
+  // KDA:MLA ratio (layer_group_size=6) means the KDA layers carry ≈0 KV
+  // cache while only 1 in every 6 layers grows an MLA cache. Architecture
+  // verified against config.json on Hugging Face:
+  //   - num_hidden_layers=42, layer_group_size=6 → 7 groups × 1 MLA per
+  //     group = 7 full-MLA layers, 35 KDA.
+  //   - MLA on the full layers: kv_lora_rank=512, qk_rope_head_dim=64.
+  //     Encoded as kvHeads=1, headDim=576, kvFactor=1 (same pattern as
+  //     Ling-2.6-flash / Kimi K3).
+  //   - 512 routed experts + 1 shared, 8 per token. 124B total (safetensors
+  //     ≈127B) / 5.1B active per InclusionAI's card.
+  //   - 256K native context (max_position_embeddings 262144). Text-only.
+  //   - Ships FP8 (inclusionAI/Ling-3.0-flash-fp8) and NVFP4
+  //     (inclusionAI/Ling-3.0-flash-fp4) checkpoints natively.
+  "ling-3.0-flash": {
+    displayName: "Ling 3.0 Flash 124B-A5B (MoE, hybrid)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ling-3.0-flash",
+    params: 124e9,
+    activeParams: 5.1e9,
+    layers: 42,
+    kvHeads: 1,
+    headDim: 576, // kv_lora_rank 512 + qk_rope_head_dim 64 (MLA latent)
+    kvFormula: "linear_hybrid",
+    fullLayers: 7, // 42 layers / layer_group_size 6 × 1 MLA per group
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // ── Xiaomi MiMo (hybrid SWA + Global, MoE, 1M context) ────────────
   // MiMo-V2.5-Pro: Xiaomi's flagship MoE (model_type `mimo_v2`). Hybrid
   // attention pattern: every 7th layer is full / global, the other 6 are
@@ -1321,6 +1420,32 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024, // model_max_length 1048576 / 1024
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // ── Tencent Hunyuan Hy3 (standard GQA MoE, agentic + reasoning) ──────
+  // Hy3 (model_type hy_v3, HYV3ForCausalLM): Tencent's July 2026 flagship
+  // open-weight MoE — a text-only 299B-A21B reasoning + agentic-coding
+  // model, Apache-2.0. First entry from the Tencent Hunyuan family in our
+  // catalog. Architecture verified against config.json on Hugging Face:
+  //   - num_hidden_layers=80, plain GQA (no MLA, no sliding window).
+  //   - num_key_value_heads=8, head_dim=128 (hidden_size 4096 / 64 attention
+  //     heads); model_type "hy_v3" but the KV path is standard GQA.
+  //   - 192 routed experts + 1 shared, num_experts_per_tok=8. Expert
+  //     hidden_dim=1536, moe_intermediate_size=1536; first_k_dense_replace=1
+  //     (only layer 0 is dense). Tencent reports 21B active per forward.
+  //   - 256K native context (max_position_embeddings 262144). Ships FP8
+  //     natively (tencent/Hy3-FP8).
+  "hy3": {
+    displayName: "Hunyuan Hy3 299B-A21B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hy3",
+    params: 299e9,
+    activeParams: 21e9,
+    layers: 80,
+    kvHeads: 8,
+    headDim: 128,
+    moe: true,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
 };
 
 /**
@@ -1328,7 +1453,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-06-15.
+ * Fetched 2026-08-10.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1386,6 +1511,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "kimi-linear-48b": "2025-10-30",
   "kimi-k2.6": "2026-04-14",
   "kimi-k2.7-code": "2026-06-11",
+  "kimi-k3": "2026-06-13",
   "glm-4.5-air": "2025-07-20",
   "glm-4.6": "2025-09-29",
   "glm-4.7-flash": "2026-01-19",
@@ -1403,9 +1529,12 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "north-mini-code-1": "2026-06-05",
   "ring-2.6-1t": "2026-05-14",
   "ling-2.6-1t": "2026-04-29",
+  "ling-2.6-flash": "2026-04-28",
+  "ling-3.0-flash": "2026-08-02",
   "mimo-v2.5-pro": "2026-04-27",
   "exaone-4.5-33b": "2026-04-04",
   "inkling": "2026-07-14",
+  "hy3": "2026-07-02",
 };
 
 /**
@@ -1417,7 +1546,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-06-15.
+ * Fetched 2026-08-10.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1446,6 +1575,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "kimi-k2-thinking": "Abduali/Kimi-K2-Thinking-NVFP4",
   "kimi-linear-48b": "Firworks/Kimi-Linear-48B-A3B-Instruct-nvfp4",
   "kimi-k2.6": "RedHatAI/Kimi-K2.6-NVFP4",
+  "kimi-k3": "RedHatAI/Kimi-K3-NVFP4",
   "glm-4.5-air": "OnFinanceAI/GLM-4.5-Air-FP4",
   "glm-4.6": "RedHatAI/GLM-4.6-NVFP4",
   "glm-5.1": "nvidia/GLM-5.1-NVFP4",
@@ -1454,6 +1584,8 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "minimax-m2.7": "nvidia/MiniMax-M2.7-NVFP4",
   "minimax-m3": "brandonmusic/MiniMax-M3-NVFP4",
   "inkling": "thinkingmachines/Inkling-NVFP4",
+  "ling-3.0-flash": "inclusionAI/Ling-3.0-flash-fp4",
+  "hy3": "LibertAIDAI/Hy3-NVFP4",
 };
 
 /**
@@ -1467,7 +1599,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
  * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
  * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
  * catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-06-16.
+ * Fetched 2026-08-10.
  */
 export const MODEL_FP8_REPOS: Record<string, string> = {
   // Native FP8 — main repos ship as FP8 / FP8-Block
@@ -1513,6 +1645,10 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "exaone-4.5-33b": "LGAI-EXAONE/EXAONE-4.5-33B-FP8",
   "granite-4.1-8b": "ibm-granite/granite-4.1-8b-FP8",
   "granite-4.1-30b": "ibm-granite/granite-4.1-30b-FP8",
+  // Tencent Hy3 ships an official FP8 checkpoint alongside the BF16 main repo.
+  "hy3": "tencent/Hy3-FP8",
+  // InclusionAI Ling 3.0 Flash ships a first-party FP8 checkpoint.
+  "ling-3.0-flash": "inclusionAI/Ling-3.0-flash-fp8",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel

@@ -95,6 +95,10 @@ const LETTER_BRANDS: Partial<
   Xiaomi: { text: "Mi", bg: "#FF6900" },
   LG: { text: "LG", bg: "#A50034" },
   ThinkingMachines: { text: "TM", bg: "#111827" },
+  // Tencent brand palette — the "T" mark uses Tencent's corporate blue
+  // (approximated from their brand guidelines) to match the "Tencent Cloud"
+  // and Hunyuan brand identity.
+  Tencent: { text: "T", bg: "#0052D9" },
 };
 
 export function BrandIcon({ brand, size = 14 }: BrandIconProps) {
