@@ -34,7 +34,9 @@ export type HardwareCategory =
   | "nvidia_workstation"
   | "nvidia_consumer"
   | "nvidia_unified"
-  | "amd_datacenter";
+  | "amd_datacenter"
+  | "amd_workstation"
+  | "intel_datacenter";
 
 /** Human-readable labels for each category, in display order. */
 export const HARDWARE_CATEGORY_LABELS: Record<HardwareCategory, string> = {
@@ -45,6 +47,8 @@ export const HARDWARE_CATEGORY_LABELS: Record<HardwareCategory, string> = {
   nvidia_consumer: "NVIDIA Consumer",
   nvidia_unified: "NVIDIA Unified Memory (GB10/DGX)",
   amd_datacenter: "AMD Instinct",
+  amd_workstation: "AMD Radeon PRO",
+  intel_datacenter: "Intel Gaudi",
 };
 
 /**
@@ -171,7 +175,9 @@ function gpuPreset(args: {
     | "nvidia_datacenter"
     | "nvidia_workstation"
     | "nvidia_consumer"
-    | "amd_datacenter";
+    | "amd_datacenter"
+    | "amd_workstation"
+    | "intel_datacenter";
   label: string;
   /** GPU model identifier as printed on the box (used for `gpuInfo`). */
   gpuInfo: string;
@@ -276,6 +282,20 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     label: "Apple M3 Ultra (Mac Studio 2025)",
     cpuModel: "Apple M3 Ultra",
     bandwidthGBs: 819,
+    maxRamGb: 512,
+    ramType: "LPDDR5X",
+  }),
+  // Apple M5 Ultra (Mac Studio 2026, announced 2026-08-25): first quad-die
+  // Apple Silicon — two dual-die M5 Max chips fused via UltraFusion. 36-core
+  // CPU, up-to-80-core GPU, and 1.2 TB/s (1200 GB/s) unified memory bandwidth
+  // (50% more than M3 Ultra) with up to 512 GB LPDDR5X. Ships in the Sep 2026
+  // Mac Studio refresh at $5,499 for the base config.
+  applePreset({
+    id: "m5-ultra",
+    category: "apple_silicon_ultra",
+    label: "Apple M5 Ultra (Mac Studio 2026)",
+    cpuModel: "Apple M5 Ultra",
+    bandwidthGBs: 1200,
     maxRamGb: 512,
     ramType: "LPDDR5X",
   }),
@@ -425,6 +445,41 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 1344,
     memoryType: "GDDR7",
   }),
+  // RTX PRO 4500 Blackwell (Workstation Edition, GB203): 32 GB GDDR7 ECC on
+  // a 256-bit bus at 28 Gbps → 896 GB/s. 10,496 CUDA cores across 82 SMs,
+  // 200 W, dual-slot, PCIe 5.0 x16.
+  gpuPreset({
+    id: "rtx-pro-4500-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 4500 Blackwell 32GB",
+    gpuInfo: "RTX PRO 4500 Blackwell 32GB",
+    vramGb: 32,
+    bandwidthGBs: 896,
+    memoryType: "GDDR7",
+  }),
+  // RTX PRO 4000 Blackwell (Workstation Edition, GB203): 24 GB GDDR7 ECC on
+  // a 192-bit bus at 28 Gbps → 672 GB/s. 8,960 CUDA cores, 140 W,
+  // single-slot, PCIe 5.0 x16.
+  gpuPreset({
+    id: "rtx-pro-4000-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 4000 Blackwell 24GB",
+    gpuInfo: "RTX PRO 4000 Blackwell 24GB",
+    vramGb: 24,
+    bandwidthGBs: 672,
+    memoryType: "GDDR7",
+  }),
+  // RTX PRO 2000 Blackwell (Workstation Edition): 16 GB GDDR7 ECC on a 128-
+  // bit bus → 288 GB/s. 4,352 CUDA cores, 70 W, single-slot, PCIe 5.0 x8.
+  gpuPreset({
+    id: "rtx-pro-2000-blackwell",
+    category: "nvidia_workstation",
+    label: "NVIDIA RTX PRO 2000 Blackwell 16GB",
+    gpuInfo: "RTX PRO 2000 Blackwell 16GB",
+    vramGb: 16,
+    bandwidthGBs: 288,
+    memoryType: "GDDR7",
+  }),
 
   // ── NVIDIA Consumer ───────────────────────────────────────────────────
   gpuPreset({
@@ -497,6 +552,37 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     vramGb: 432,
     bandwidthGBs: 19600,
     memoryType: "HBM4",
+  }),
+
+  // ── AMD Radeon PRO (Workstation) ─────────────────────────────────────
+  // AMD Radeon AI PRO R9700 (RDNA 4, 32GB): first AMD workstation-tier card
+  // aimed squarely at local-LLM users. 32 GB GDDR6 on a 256-bit bus at 20
+  // Gbps → 640 GB/s. 64 CUs / 4,096 stream processors, 128 second-gen AI
+  // accelerators. Roughly the AMD counterpart of the RTX PRO 4500 Blackwell
+  // at a lower price point (~$1,299 MSRP).
+  gpuPreset({
+    id: "radeon-ai-pro-r9700",
+    category: "amd_workstation",
+    label: "AMD Radeon AI PRO R9700 32GB",
+    gpuInfo: "Radeon AI PRO R9700 32GB",
+    vramGb: 32,
+    bandwidthGBs: 640,
+    memoryType: "GDDR6",
+  }),
+
+  // ── Intel Gaudi (Data Center) ────────────────────────────────────────
+  // Intel Gaudi 3 (OAM/PCIe): Intel's flagship AI accelerator. 128 GB HBM2e
+  // (8 stacks) at 3.7 TB/s. Delivers ~1835 TFLOPS BF16 / 1835 TFLOPS FP8
+  // dense; positioned against NVIDIA H100 in supervised training and
+  // inference throughput.
+  gpuPreset({
+    id: "intel-gaudi-3",
+    category: "intel_datacenter",
+    label: "Intel Gaudi 3 128GB",
+    gpuInfo: "Intel Gaudi 3 128GB",
+    vramGb: 128,
+    bandwidthGBs: 3700,
+    memoryType: "HBM2e",
   }),
 ];
 

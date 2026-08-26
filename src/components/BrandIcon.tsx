@@ -95,6 +95,9 @@ const LETTER_BRANDS: Partial<
   Xiaomi: { text: "Mi", bg: "#FF6900" },
   LG: { text: "LG", bg: "#A50034" },
   ThinkingMachines: { text: "TM", bg: "#111827" },
+  Tencent: { text: "T", bg: "#0052D9" },
+  Sber: { text: "S", bg: "#21A038" },
+  Meituan: { text: "Mt", bg: "#FFC300" },
 };
 
 export function BrandIcon({ brand, size = 14 }: BrandIconProps) {
