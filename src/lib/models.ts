@@ -322,6 +322,36 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // Qwen 3.8-Max (Qwen3.8-2.4T-A95B, model_type qwen3_5_moe_text): Alibaba's
+  // frontier open-weight release — same qwen3_5 Gated DeltaNet hybrid stack as
+  // 3.5/3.6/3.8 (full_attention_interval=4). Architecture verified against
+  // config.json on Hugging Face:
+  //   - 92 hidden layers → 23 full-attention (every 4th layer 3..91) + 69
+  //     linear-attention (Gated DeltaNet) → linear_hybrid, fullLayers=23.
+  //   - num_key_value_heads=4, head_dim=256 on full-attention layers.
+  //   - 512 routed experts + 1 shared, num_experts_per_tok=10.
+  //   - max_position_embeddings 262144 → 256K context (extendable to ~1M via
+  //     YaRN per the model card).
+  //   - No vision_config → text-only. Chat template refuses disabling
+  //     thinking (enable_thinking=False raises) → thinking-only.
+  // Total safetensors from HF API: 2,446B (bf16-equivalent) — matches the
+  // 2.4T name. Active ≈95B per the model card and launch coverage.
+  // License: revenue-share ("license: other"), not Apache-2.0.
+  "qwen3.8-max": {
+    displayName: "Qwen 3.8-Max 2.4T-A95B (MoE)",
+    brand: "Alibaba",
+    hfRepoId: "Qwen/Qwen3.8-2.4T-A95B",
+    params: 2.446e12,
+    activeParams: 95e9,
+    layers: 92,
+    kvHeads: 4,
+    headDim: 256,
+    kvFormula: "linear_hybrid",
+    fullLayers: 23,
+    moe: true,
+    maxContextK: 256,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // Qwen 3.8-Flash-Next: first public preview of the qwen4_exp architecture.
   // Same hybrid pattern as qwen3_5 (full_attention_interval=4) but a leaner,
   // sparser MoE — 512 routed experts + 1 shared, num_experts_per_tok=10, with
@@ -1141,6 +1171,42 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024, // max_position_embeddings 1048576 / 1024
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // GLM-5.3-Flash (model_type glm5_next / Glm5NextForConditionalGeneration —
+  // "Ox Alpha" unmasked): Zhipu's first natively multimodal GLM-5 release, and
+  // the first GLM to combine MLA + DeepSeek-style sparse attention (DSA) with
+  // linear attention on most layers. Text-config verified against config.json
+  // on Hugging Face:
+  //   - num_hidden_layers 45. layer_types is 34 `linear_attention` + 11
+  //     `deepseek_sparse_attention` (full_attn_layers at 3, 7, 11, 15, 19, 23,
+  //     27, 31, 35, 39, 43 — every 4th layer) → linear_hybrid, fullLayers=11.
+  //   - Full-attention layers use no-RoPE MLA (mla_use_nope=true,
+  //     kv_lora_rank=512, qk_rope_head_dim=0, qk_nope_head_dim=256,
+  //     v_head_dim=256). Encoded like Kimi K3 / Ling-flash as a single wide
+  //     MLA-latent "head" with kvHeads=1, headDim=512 (=kv_lora_rank +
+  //     qk_rope_head_dim = 512 + 0), kvFactor=1.
+  //   - 288 routed experts + 1 shared (n_shared_experts=1), num_experts_per_tok
+  //     8. first_k_dense_replace=3.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - Wrapper config has vision_config → VLM (image + video in).
+  //   - quantization_config fmt=e4m3 → natively FP8.
+  // Total safetensors from HF API: F8_E4M3 314B + BF16 6.9B ≈ 321B. Active ~18B
+  // per the model card ("320B-A18B" per the launch coverage). MIT license.
+  "glm-5.3-flash": {
+    displayName: "GLM-5.3-Flash 320B-A18B (MoE, hybrid)",
+    brand: "Zhipu",
+    hfRepoId: "zai-org/GLM-5.3-Flash",
+    params: 321e9,
+    activeParams: 18e9,
+    layers: 45,
+    kvHeads: 1,
+    headDim: 512, // MLA latent (kv_lora_rank 512 + qk_rope_head_dim 0, mla_use_nope=true)
+    kvFormula: "linear_hybrid",
+    fullLayers: 11,
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── MiniMax ───────────────────────────────────────────────────────
   // MiniMax-M3 (model_type minimax_m3_vl): introduces MiniMax Sparse Attention
   // (MSA) — block-sparse top-k (16 blocks of 128 tokens) over standard GQA on
@@ -1435,6 +1501,32 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  "ling-3.0-tiny": {
+    // Smallest member of the Ling 3.0 family (model_type bailing_hybrid). Same
+    // MLA-full + KDA-linear hybrid recipe as Ling 3.0-flash, just at a much
+    // smaller size — laptop-runnable. Architecture verified against config.json
+    // on Hugging Face: layer_group_size=4, num_hidden_layers=24 → 24/4 = 6 MLA
+    // full-attention + 18 KDA linear. kv_lora_rank=512, qk_rope_head_dim=64,
+    // so the MLA latent is encoded as a single (kv_lora_rank + qk_rope = 576)-
+    // wide "head" with kvFactor=1 — same convention as Ling-flash / Kimi K3.
+    // 128 routed experts + 1 shared, num_experts_per_tok=8. 128K context
+    // (max_position_embeddings 131072). Total safetensors 7.89B; active ≈1.3B
+    // per the model card. Text-only. MIT license.
+    displayName: "Ling 3.0-tiny 7.9B-A1.3B (MoE, hybrid)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ling-3.0-tiny",
+    params: 7.9e9,
+    activeParams: 1.3e9,
+    layers: 24,
+    kvHeads: 1,
+    headDim: 576, // MLA latent (kv_lora_rank 512 + qk_rope_head_dim 64)
+    kvFormula: "linear_hybrid",
+    fullLayers: 6,
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 128,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
   // ── Xiaomi MiMo (hybrid SWA + Global, MoE, 1M context) ────────────
   // MiMo-V2.5-Pro: Xiaomi's flagship MoE (model_type `mimo_v2`). Hybrid
   // attention pattern: every 7th layer is full / global, the other 6 are
@@ -1669,7 +1761,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-08-26.
+ * Fetched 2026-08-27.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1763,6 +1855,10 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "hunyuan-a13b": "2025-06-25",
   "gigachat-3.5-ultra": "2026-07-05",
   "longcat-2.0": "2026-07-05",
+  // New in the 2026-08-27 refresh
+  "qwen3.8-max": "2026-08-12",
+  "glm-5.3-flash": "2026-08-25",
+  "ling-3.0-tiny": "2026-08-10",
 };
 
 /**
@@ -1774,7 +1870,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-08-26.
+ * Fetched 2026-08-27.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1820,6 +1916,8 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "inkling-small": "thinkingmachines/Inkling-Small-NVFP4",
   "hy3": "kodelow/Hy3-NVFP4-W4A16",
   "ling-3.0-flash": "inclusionAI/Ling-3.0-flash-fp4",
+  // New in the 2026-08-27 refresh
+  "qwen3.8-max": "RadixArk/Qwen3.8-2.4T-A95B-NVFP4",
 };
 
 /**
@@ -1833,7 +1931,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
  * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
  * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
  * catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-08-26.
+ * Fetched 2026-08-27.
  */
 export const MODEL_FP8_REPOS: Record<string, string> = {
   // Native FP8 — main repos ship as FP8 / FP8-Block
@@ -1892,6 +1990,11 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "ling-2.6-flash": "inclusionAI/Ling-2.6-flash-fp8",
   // GigaChat 3.5 Ultra ships natively FP8 (quantization_config fmt=e4m3).
   "gigachat-3.5-ultra": "ai-sage/GigaChat3.5-432B-A28B",
+  // New in the 2026-08-27 refresh
+  "qwen3.8-max": "Qwen/Qwen3.8-2.4T-A95B-FP8",
+  // GLM-5.3-Flash ships natively FP8 (quantization_config fmt=e4m3).
+  "glm-5.3-flash": "zai-org/GLM-5.3-Flash",
+  "ling-3.0-tiny": "inclusionAI/Ling-3.0-tiny-fp8",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
