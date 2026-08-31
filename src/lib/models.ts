@@ -545,6 +545,30 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
+  // Muse Glimmer 30B (meta-models/Muse-Glimmer-30B): Meta Superintelligence
+  // Lab's first open-weight release after Llama 4, a dense multimodal
+  // (text + image + video) agentic model published under Apache 2.0 on
+  // 2026-08-09. muse_glimmer_text config: 52 layers, hidden_size 6656,
+  // num_key_value_heads 2, head_dim 128, sliding_window 2048,
+  // max_position_embeddings 131072. layer_types alternate 3 sliding + 1
+  // full → 13 full layers (indices 4, 8, ..., 52). Standard GQA (no MLA),
+  // no attention_k_eq_v (K and V stored separately, default kvFactor=2).
+  // Vision encoder (muse_glimmer_vision) adds ~1.8B of the total ~30B.
+  "muse-glimmer-30b": {
+    displayName: "Muse Glimmer 30B",
+    brand: "Meta",
+    hfRepoId: "meta-models/Muse-Glimmer-30B",
+    params: 29.6e9,
+    layers: 52,
+    kvHeads: 2,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 13,
+    slidingWindow: 2048,
+    moe: false,
+    maxContextK: 128,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Mistral (standard) ────────────────────────────────────────────
   "mistral-nemo-12b": {
     displayName: "Mistral NeMo 12B Instruct",
@@ -1761,7 +1785,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-08-27.
+ * Fetched 2026-08-31.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1859,6 +1883,8 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "qwen3.8-max": "2026-08-12",
   "glm-5.3-flash": "2026-08-25",
   "ling-3.0-tiny": "2026-08-10",
+  // New in the 2026-08-31 refresh
+  "muse-glimmer-30b": "2026-08-09",
 };
 
 /**
@@ -1870,7 +1896,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-08-27.
+ * Fetched 2026-08-31.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1918,6 +1944,8 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "ling-3.0-flash": "inclusionAI/Ling-3.0-flash-fp4",
   // New in the 2026-08-27 refresh
   "qwen3.8-max": "RadixArk/Qwen3.8-2.4T-A95B-NVFP4",
+  // New in the 2026-08-31 refresh
+  "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-NVFP4",
 };
 
 /**
@@ -1931,7 +1959,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
  * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
  * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
  * catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-08-27.
+ * Fetched 2026-08-31.
  */
 export const MODEL_FP8_REPOS: Record<string, string> = {
   // Native FP8 — main repos ship as FP8 / FP8-Block
@@ -1995,6 +2023,8 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   // GLM-5.3-Flash ships natively FP8 (quantization_config fmt=e4m3).
   "glm-5.3-flash": "zai-org/GLM-5.3-Flash",
   "ling-3.0-tiny": "inclusionAI/Ling-3.0-tiny-fp8",
+  // New in the 2026-08-31 refresh
+  "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-FP8-block",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
