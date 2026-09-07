@@ -256,7 +256,7 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["mi300x", "5300"],
     ["mi325x", "6000"],
     ["mi355x", "8000"],
-    ["mi455x", "19600"],
+    ["mi455x", "23300"],
     ["radeon-ai-pro-r9700", "640"],
     ["intel-gaudi-3", "3700"],
   ];

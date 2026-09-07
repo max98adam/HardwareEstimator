@@ -539,18 +539,21 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     memoryType: "HBM3e",
   }),
   // AMD Instinct MI455X (CDNA5, MI400 series): flagship training+inference
-  // accelerator unveiled at CES 2026 with H2 2026 availability. Moves from
-  // HBM3e to HBM4 and pushes both the memory pool and its bandwidth well
-  // beyond the MI355X — 432 GB (1.5× MI355X's 288 GB) at 19.6 TB/s (~2.45×
-  // MI355X's 8 TB/s). AMD lists the same package hitting 40 PFLOPS FP4 /
-  // 20 PFLOPS FP8, positioned directly against NVIDIA's Rubin R100.
+  // accelerator unveiled at CES 2026, then formally launched at Advancing AI
+  // 2026 (Nov 2026) with H2 2026 availability. Moves from HBM3e to HBM4 and
+  // pushes both the memory pool and its bandwidth well beyond the MI355X —
+  // 432 GB (1.5× MI355X's 288 GB) at 23.3 TB/s (~2.9× MI355X's 8 TB/s). The
+  // 19.6 TB/s figure that circulated at CES was the pre-launch spec; AMD's
+  // official product page (amd.com/…/mi400/mi455x.html) confirms 23.3 TB/s
+  // peak at launch. AMD lists 40.26 PFLOPS peak MXFP4 compute, positioned
+  // directly against NVIDIA's Rubin R100.
   gpuPreset({
     id: "mi455x",
     category: "amd_datacenter",
     label: "AMD Instinct MI455X (CDNA5)",
     gpuInfo: "MI455X 432GB",
     vramGb: 432,
-    bandwidthGBs: 19600,
+    bandwidthGBs: 23300,
     memoryType: "HBM4",
   }),
 

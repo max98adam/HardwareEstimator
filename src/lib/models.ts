@@ -1785,7 +1785,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-08-31.
+ * Fetched 2026-09-07.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1880,7 +1880,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gigachat-3.5-ultra": "2026-07-05",
   "longcat-2.0": "2026-07-05",
   // New in the 2026-08-27 refresh
-  "qwen3.8-max": "2026-08-12",
+  "qwen3.8-max": "2026-08-08",
   "glm-5.3-flash": "2026-08-25",
   "ling-3.0-tiny": "2026-08-10",
   // New in the 2026-08-31 refresh
@@ -1896,7 +1896,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-08-31.
+ * Fetched 2026-09-07.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1959,7 +1959,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
  * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
  * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
  * catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-08-31.
+ * Fetched 2026-09-07.
  */
 export const MODEL_FP8_REPOS: Record<string, string> = {
   // Native FP8 — main repos ship as FP8 / FP8-Block
