@@ -950,6 +950,46 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // DeepSeek V4.1-Flash (model_type deepseek_v41, DeepseekV41ForCausalLM):
+  // successor to V4-Flash-0731 with a new "CED + CSA2" attention family — a
+  // Causal Encoder-Decoder split plus a Compressed Sparse Attention v2 indexer.
+  // Model card headlines 552B backbone, 8B active on prefill / 16B active on
+  // decode, and ~890 bytes/token KV (roughly 1/4 of V4-Flash's KV footprint).
+  // Ships natively FP8 (E4M3) backbone with FP4-quantized routed experts; the
+  // safetensors mix is 204B F8_E4M3 + 557B I8 (quantized experts) + BF16
+  // residuals for a 763B safetensors total (backbone quoted as 552B). MIT.
+  // Architecture verified against config.json (text_config):
+  //   - num_hidden_layers 40. compress_ratios array (length 43, covers 40
+  //     layers + 3 MTP heads) holds 0/1/2 values: 2 dense (val=0),
+  //     20 with compress_ratio=1, 18 with compress_ratio=2, plus 3 trailing "0"
+  //     MTP slots (num_nextn_predict_layers=3).
+  //   - num_key_value_heads 1, head_dim 512, qk_rope_head_dim 64.
+  //   - 384 routed experts + 1 shared, num_experts_per_tok 6.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - vision_config present → VLM (image-text-to-text).
+  // None of our four kvFormulas fits CED + CSA2 exactly. Approximated as
+  // `hybrid` following the V4-Flash convention: fullLayers=5 with fullHeadDim=128
+  // matches DeepSeek's "~1/4 the V4-Flash KV" claim (V4-Flash: 21 × 128 = 2688
+  // B/token in FP8; this: 5 × 128 = 640, close to the 890 B/token headline).
+  // Keep the inline comment saying so — it's an approximation.
+  "deepseek-v4.1-flash": {
+    displayName: "DeepSeek V4.1-Flash 552B-A16B (MoE)",
+    brand: "DeepSeek",
+    hfRepoId: "deepseek-ai/DeepSeek-V4.1-Flash",
+    params: 552e9,
+    activeParams: 16e9,
+    layers: 40,
+    kvHeads: 1,
+    headDim: 512,
+    kvFormula: "hybrid",
+    fullLayers: 5, // approx: 1/4 of V4-Flash's 21 to match "~890 B/token" claim
+    fullKvHeads: 1,
+    fullHeadDim: 128, // same fold convention as V4-Flash-0731
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Moonshot AI — Kimi (MLA, ~1T MoE) ─────────────────────────────
   "kimi-k2-thinking": {
     // Kimi K2 Thinking: ~1T-param MoE (32B active) reasoning model with the
@@ -1551,6 +1591,34 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 128,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // Ling 3.0-flash VL (model_type bailing_moe_v3_vl,
+  // BailingMoeV3VLForConditionalGeneration): the multimodal variant of the
+  // base ling-3.0-flash text model, released a month later. Same bailing_hybrid
+  // recipe (MLA-full + KDA-linear) with layer_group_size=6 and
+  // num_hidden_layers=42 → 7 MLA full-attention + 35 KDA linear. Wrapped in a
+  // VL head with image + video input (image_token_id + video_token_id,
+  // VideoRoPE for spatial/temporal). Architecture verified against config.json
+  // (text_config) on Hugging Face: kv_lora_rank=512, qk_rope_head_dim=64,
+  // 512 routed experts + 1 shared, num_experts_per_tok=8. Context is 128K here
+  // (max_position_embeddings 131072), narrower than the 256K text-only base
+  // (the VL variant does not ship a YaRN-extended window). Safetensors total
+  // 125B BF16; active ≈5B (matches base ling-3.0-flash's expert layout). MIT.
+  "ling-3.0-flash-vl": {
+    displayName: "Ling 3.0-flash-VL 125B-A5B (MoE, hybrid)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ling-3.0-flash-VL",
+    params: 125e9,
+    activeParams: 5e9,
+    layers: 42,
+    kvHeads: 1,
+    headDim: 576, // MLA latent (kv_lora_rank 512 + qk_rope_head_dim 64)
+    kvFormula: "linear_hybrid",
+    fullLayers: 7,
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 128,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Xiaomi MiMo (hybrid SWA + Global, MoE, 1M context) ────────────
   // MiMo-V2.5-Pro: Xiaomi's flagship MoE (model_type `mimo_v2`). Hybrid
   // attention pattern: every 7th layer is full / global, the other 6 are
@@ -1709,6 +1777,36 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // Tencent Hunyuan Hy4 Preview (model_type hy_v4, HYV4ForCausalLM): Tencent's
+  // 4th-generation open flagship. Every layer is `deepseek_sparse_attention`
+  // with MLA (use_mla=true, kv_lora_rank=512, qk_rope_head_dim=64) plus a DSA
+  // indexer (index_topk=2048). Modeled as `mla` since the DSA sparsity only
+  // shrinks KV further at long context — same convention as DeepSeek V3.2 /
+  // GLM-5.x / LongCat 2.0. Verified against config.json on Hugging Face:
+  //   - num_hidden_layers 78. num_attention_heads 64. num_key_value_heads 8
+  //     is present but ignored under MLA. kv_lora_rank 512, qk_rope_head_dim 64.
+  //   - 256 routed experts + 1 shared, num_experts_per_tok 8.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - No vision_config → text-only. Apache-2.0 license.
+  // Safetensors total: ~780B BF16. Active ≈40B (top-8+1 of 256+1 expert mass
+  // across 77 MoE layers + MLA attention + one dense layer + embeddings).
+  // Native FP8 mirror at tencent/Hy4-preview-FP8.
+  "hy4-preview": {
+    displayName: "Hunyuan Hy4 Preview 780B-A40B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hy4-preview",
+    params: 780e9,
+    activeParams: 40e9,
+    layers: 78,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // Tencent Hunyuan A13B (model_type hunyuan_v1_moe): the popular smaller
   // Hunyuan MoE, backfilled for completeness. 32 layers, plain GQA
   // (kvHeads=8, headDim=128), 64 routed experts, top-8, 32K context.
@@ -1785,7 +1883,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
  * (`https://huggingface.co/api/models/<repo>`) — the authoritative
  * "released on HF" date. Kept as one block so it's trivial to re-verify
  * against the API. Stored ISO `YYYY-MM-DD`; the UI formats to "Mon YYYY".
- * Fetched 2026-09-07.
+ * Fetched 2026-09-14.
  */
 export const MODEL_RELEASE_DATES: Record<string, string> = {
   "gemma2-9b": "2024-06-24",
@@ -1885,6 +1983,10 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "ling-3.0-tiny": "2026-08-10",
   // New in the 2026-08-31 refresh
   "muse-glimmer-30b": "2026-08-09",
+  // New in the 2026-09-14 refresh
+  "deepseek-v4.1-flash": "2026-09-10",
+  "hy4-preview": "2026-08-27",
+  "ling-3.0-flash-vl": "2026-09-04",
 };
 
 /**
@@ -1896,7 +1998,7 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
  * Sourced (preferring faithful publishers: RedHatAI / NVIDIA / the vendor)
  * and verified to exist via `https://huggingface.co/api/models/<repo>`.
  * Re-verify on each catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-09-07.
+ * Fetched 2026-09-14.
  */
 export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "gemma4-12b": "AxionML/Gemma-4-12B-NVFP4",
@@ -1946,6 +2048,12 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "qwen3.8-max": "RadixArk/Qwen3.8-2.4T-A95B-NVFP4",
   // New in the 2026-08-31 refresh
   "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-NVFP4",
+  // New in the 2026-09-14 refresh. DeepSeek V4.1-Flash has no RedHatAI/NVIDIA
+  // mirror yet (preview model); LibertAIDAI is a bit-exact NVFP4 conversion of
+  // the routed experts. Ling 3.0-flash-VL has an inclusionAI-published FP4
+  // mirror.
+  "deepseek-v4.1-flash": "LibertAIDAI/DeepSeek-V4.1-Flash-NVFP4",
+  "ling-3.0-flash-vl": "inclusionAI/Ling-3.0-flash-VL-fp4",
 };
 
 /**
@@ -1959,7 +2067,7 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
  * mirror (RedHatAI / NVIDIA / Qwen / zai-org / the vendor). Verified to
  * exist via `https://huggingface.co/api/models/<repo>`. Re-verify on each
  * catalog refresh; drop entries whose repo disappears.
- * Fetched 2026-09-07.
+ * Fetched 2026-09-14.
  */
 export const MODEL_FP8_REPOS: Record<string, string> = {
   // Native FP8 — main repos ship as FP8 / FP8-Block
@@ -2025,6 +2133,12 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "ling-3.0-tiny": "inclusionAI/Ling-3.0-tiny-fp8",
   // New in the 2026-08-31 refresh
   "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-FP8-block",
+  // New in the 2026-09-14 refresh.
+  // DeepSeek V4.1-Flash ships natively FP8 (quantization_config quant_method=fp8,
+  // FP8-E4M3 dominant + FP4-quantized routed experts). Main repo is the FP8 build.
+  "deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash",
+  "hy4-preview": "tencent/Hy4-preview-FP8",
+  "ling-3.0-flash-vl": "inclusionAI/Ling-3.0-flash-VL-fp8",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
