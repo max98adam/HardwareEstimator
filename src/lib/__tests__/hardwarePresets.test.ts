@@ -115,6 +115,42 @@ describe("HARDWARE_PRESETS — Apple Silicon presets", () => {
   });
 });
 
+describe("HARDWARE_PRESETS — AMD unified-memory presets (Ryzen AI Max)", () => {
+  // Ryzen AI Max APUs (Strix / Gorgon Halo) are the AMD counterpart of the
+  // NVIDIA DGX Spark: Zen 5 CPU + Radeon iGPU sharing a single LPDDR5X pool.
+  // They live on the unified-memory branch — no discrete GPU bandwidth, the
+  // ~273 GB/s LPDDR5X pool gates inference.
+  const unifiedPresets = HARDWARE_PRESETS.filter(
+    (p) => p.category === "amd_unified",
+  );
+
+  it("zeroes out the GPU block (unified memory branch)", () => {
+    for (const preset of unifiedPresets) {
+      expect(preset.hosting.gpuCount, `${preset.id} gpuCount`).toBe("0");
+      expect(preset.hosting.gpuVram, `${preset.id} gpuVram`).toBe("0");
+      expect(preset.hosting.gpuBandwidth, `${preset.id} gpuBandwidth`).toBe("0");
+      expect(preset.hosting.gpuInfo, `${preset.id} gpuInfo`).toBe("");
+    }
+  });
+
+  it("fills RAM bandwidth + capacity and uses AMD-branded CPU + LPDDR5X", () => {
+    for (const preset of unifiedPresets) {
+      const bw = parseFloat(preset.hosting.ramBandwidthGBs ?? "");
+      const ram = parseFloat(preset.hosting.availableRam ?? "");
+      expect(bw, `${preset.id} ramBandwidthGBs`).toBeGreaterThan(0);
+      expect(ram, `${preset.id} availableRam`).toBeGreaterThan(0);
+      expect(preset.hosting.cpuModel ?? "").toMatch(/AMD/);
+      expect(preset.hosting.ramType ?? "").toMatch(/LPDDR5/);
+    }
+  });
+
+  it("sets BW efficiency to 60% (unified-memory access pattern)", () => {
+    for (const preset of unifiedPresets) {
+      expect(preset.hosting.efficiency, `${preset.id} efficiency`).toBe("60");
+    }
+  });
+});
+
 describe("HARDWARE_PRESETS — NVIDIA unified-memory presets (DGX Spark / GB10)", () => {
   // GB10-class systems (DGX Spark) share the unified-memory branch with
   // Apple Silicon — no discrete GPU bandwidth, the 273 GB/s LPDDR5X pool
@@ -239,11 +275,13 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["m3-ultra", "819"],
     ["m5-ultra", "1200"],
     ["nvidia-dgx-spark", "273"],
+    ["amd-ryzen-ai-max-plus-pro-495", "273"],
     ["h100-sxm", "3350"],
     ["h200", "4800"],
     ["b200", "8000"],
     ["b300", "8000"],
     ["rubin-r100", "22000"],
+    ["rubin-cpx", "2000"],
     ["rtx-4090", "1008"],
     ["rtx-5090", "1792"],
     ["rtx-pro-6000-blackwell", "1792"],

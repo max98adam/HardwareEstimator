@@ -36,6 +36,7 @@ export type HardwareCategory =
   | "nvidia_unified"
   | "amd_datacenter"
   | "amd_workstation"
+  | "amd_unified"
   | "intel_datacenter";
 
 /** Human-readable labels for each category, in display order. */
@@ -48,6 +49,7 @@ export const HARDWARE_CATEGORY_LABELS: Record<HardwareCategory, string> = {
   nvidia_unified: "NVIDIA Unified Memory (GB10/DGX)",
   amd_datacenter: "AMD Instinct",
   amd_workstation: "AMD Radeon PRO",
+  amd_unified: "AMD Unified Memory (Ryzen AI Max)",
   intel_datacenter: "Intel Gaudi",
 };
 
@@ -118,7 +120,8 @@ function unifiedMemoryPreset(args: {
   category:
     | "apple_silicon_max"
     | "apple_silicon_ultra"
-    | "nvidia_unified";
+    | "nvidia_unified"
+    | "amd_unified";
   label: string;
   cpuModel: string;
   /** Unified memory bandwidth in GB/s. */
@@ -318,6 +321,25 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     ramType: "LPDDR5X",
   }),
 
+  // ── AMD Unified Memory (Ryzen AI Max — "Strix / Gorgon Halo") ────────
+  // The AMD counterpart of NVIDIA's DGX Spark: a Zen 5 APU + Radeon iGPU
+  // sharing a single LPDDR5X pool. Ryzen AI Max+ PRO 495 ("Gorgon Halo"):
+  // 16 Zen 5 cores + Radeon 8060S/8065S iGPU (40 RDNA 3.5 CUs), up to 192 GB
+  // of LPDDR5X-8533 on a 256-bit bus for ~273 GB/s of unified bandwidth.
+  // First retail systems shipping Aug-Sep 2026 (Framework Desktop, Gmktec
+  // Evo-X5 Pro, ACEMAGIC F9A, CHUWI UniBox AI495 Pro). Same unified-memory
+  // branch as DGX Spark / Apple Silicon — no discrete GPU bandwidth, the
+  // LPDDR5X pool is what gates inference.
+  unifiedMemoryPreset({
+    id: "amd-ryzen-ai-max-plus-pro-495",
+    category: "amd_unified",
+    label: "AMD Ryzen AI Max+ PRO 495 (192GB)",
+    cpuModel: "AMD Ryzen AI Max+ PRO 495",
+    bandwidthGBs: 273,
+    maxRamGb: 192,
+    ramType: "LPDDR5X",
+  }),
+
   // ── NVIDIA Data Center ────────────────────────────────────────────────
   gpuPreset({
     id: "a100-40",
@@ -397,6 +419,23 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     vramGb: 288,
     bandwidthGBs: 22000,
     memoryType: "HBM4",
+  }),
+  // NVIDIA Rubin CPX (announced 2026-09-09 at AI Infra Summit): a specialised
+  // long-context inference accelerator that ships alongside the Rubin R100 in
+  // Vera Rubin NVL144 CPX racks. Single-die, monolithic Rubin silicon paired
+  // with 128 GB of GDDR7 (not HBM) on a 512-bit bus for ~2 TB/s bandwidth —
+  // dramatically cheaper per GB of VRAM than an HBM4 R100 while still hitting
+  // 30 PFLOPS NVFP4 dense and 3× the attention throughput of GB300 NVL72 on
+  // 1M-token prompts. General availability end of 2026. Sits in the data-center
+  // tier as a distinct SKU, complementing (not replacing) the R100.
+  gpuPreset({
+    id: "rubin-cpx",
+    category: "nvidia_datacenter",
+    label: "NVIDIA Rubin CPX 128GB",
+    gpuInfo: "Rubin CPX 128GB",
+    vramGb: 128,
+    bandwidthGBs: 2000,
+    memoryType: "GDDR7",
   }),
 
   // ── NVIDIA RTX PRO (Workstation) ──────────────────────────────────────
