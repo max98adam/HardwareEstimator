@@ -950,6 +950,45 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // DeepSeek V4.1-Flash (model_type deepseek_v41, DeepseekV41ForCausalLM inside
+  // a VLM wrapper with DeepSeek-ViT). The V4-Flash successor: same hierarchical
+  // hybrid attention family but with a refined "CSA2" scheme
+  // (Full/Reindex/Reuse modes) plus FP4-native KV caching that shrinks the
+  // global KV footprint to ~890 bytes/token (~¼ of V4-Flash-0731 per the model
+  // card). Text-config verified against config.json on Hugging Face:
+  //   - text_config.num_hidden_layers 40. compress_ratios array assigns each
+  //     of the 40 hidden layers to 0 (special, e.g. dspark/engram: 2 layers),
+  //     1 (uncompressed / full attention: 20 layers) or 2 (2× compressed: 18
+  //     layers). We model the 20 uncompressed layers as full and the other 20
+  //     as sliding-window-bounded — same approximation family as V4-Flash /
+  //     V4-Pro, where compress_ratios drives the fullLayers count.
+  //   - num_key_value_heads 1, head_dim 512, sliding_window 128.
+  //   - vision_config (DeepSeek-ViT, 32 layers) → VLM (image + text in,
+  //     autoregressive text out).
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - Ships natively FP8 (activations, non-expert weights) with FP4 experts
+  //     (quantization_config quant_method=fp8, expert_dtype=fp4).
+  // Total ≈552B backbone params per the model card; active is 16B during
+  // decode (8B during prefill) — we use the decode-time figure since inference
+  // is decode-heavy. MIT license.
+  "deepseek-v4.1-flash": {
+    displayName: "DeepSeek V4.1-Flash 552B-A16B (MoE)",
+    brand: "DeepSeek",
+    hfRepoId: "deepseek-ai/DeepSeek-V4.1-Flash",
+    params: 552e9,
+    activeParams: 16e9,
+    layers: 40,
+    kvHeads: 1,
+    headDim: 512,
+    kvFormula: "hybrid",
+    fullLayers: 20, // compress_ratio==1 (uncompressed) layers: 20 of 40 in config.json
+    fullKvHeads: 1,
+    fullHeadDim: 512, // no folding on the uncompressed ratio=1 layers
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Moonshot AI — Kimi (MLA, ~1T MoE) ─────────────────────────────
   "kimi-k2-thinking": {
     // Kimi K2 Thinking: ~1T-param MoE (32B active) reasoning model with the
@@ -1183,6 +1222,31 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     displayName: "GLM-5.2 753B-A41B (MoE)",
     brand: "Zhipu",
     hfRepoId: "zai-org/GLM-5.2",
+    params: 753e9,
+    activeParams: 41e9,
+    layers: 78,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  // GLM-5.3 (model_type glm_moe_dsa): the flagship of the GLM-5.3 line. Shares
+  // the same MLA + DeepSeek-style sparse attention (DSA) core as GLM-5.1 / 5.2
+  // — 78 layers, kv_lora_rank=512, qk_rope_head_dim=64, 256 routed experts + 1
+  // shared, 8 active per token, first_k_dense_replace=3 — extended to a native
+  // 1M-token context (max_position_embeddings 1048576). Text-only. Ships
+  // natively FP8 (quantization_config fmt=e4m3). Safetensors total ~753B in
+  // FP8 (matches GLM-5.2's size). Active stays at ~41B since experts have the
+  // same shape as GLM-5.2. Same MLA modeling as 5.1/5.2 — a safe upper bound
+  // on KV; the DSA sparsity only shrinks it further at long context.
+  "glm-5.3": {
+    displayName: "GLM-5.3 753B-A41B (MoE)",
+    brand: "Zhipu",
+    hfRepoId: "zai-org/GLM-5.3",
     params: 753e9,
     activeParams: 41e9,
     layers: 78,
@@ -1885,6 +1949,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "ling-3.0-tiny": "2026-08-10",
   // New in the 2026-08-31 refresh
   "muse-glimmer-30b": "2026-08-09",
+  // New in the 2026-09-21 refresh
+  "glm-5.3": "2026-08-25",
+  "deepseek-v4.1-flash": "2026-09-10",
 };
 
 /**
@@ -1946,6 +2013,9 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "qwen3.8-max": "RadixArk/Qwen3.8-2.4T-A95B-NVFP4",
   // New in the 2026-08-31 refresh
   "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-NVFP4",
+  // New in the 2026-09-21 refresh
+  "glm-5.3": "nvidia/GLM-5.3-NVFP4",
+  "deepseek-v4.1-flash": "nvidia/DeepSeek-V4.1-Flash-NVFP4",
 };
 
 /**
@@ -2025,6 +2095,11 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "ling-3.0-tiny": "inclusionAI/Ling-3.0-tiny-fp8",
   // New in the 2026-08-31 refresh
   "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-FP8-block",
+  // New in the 2026-09-21 refresh
+  // GLM-5.3 ships natively FP8 (quantization_config fmt=e4m3).
+  "glm-5.3": "zai-org/GLM-5.3",
+  // DeepSeek V4.1-Flash ships natively FP8 (quant_method=fp8, expert_dtype=fp4).
+  "deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
