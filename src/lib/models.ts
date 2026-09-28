@@ -1644,6 +1644,76 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // MiMo V2.6-Pro-MOPD (model_type mimo_v2): the MOPD (Multi-teacher On-Policy
+  // Distillation) refresh of Xiaomi's flagship MiMo V2.6-Pro-RL (2026-09-21),
+  // published 2026-09-27. Same mimo_v2 hybrid SWA + full stack as V2.5 Pro —
+  // architecture verified against config.json on Hugging Face:
+  //   - num_hidden_layers 70. hybrid_layer_pattern zeros (full attention) at
+  //     indices 0, 7, 15, 23, 31, 39, 47, 55, 62, 69 → 10 GA + 60 SWA layers.
+  //   - Full and SWA layers share the same KV dims (num_key_value_heads=8 ==
+  //     swa_num_key_value_heads=8), so no separate fullKvHeads/fullHeadDim.
+  //   - QK head_dim 192 and v_head_dim 128 (asymmetric). Encoded as
+  //     headDim=160 = average(192, 128) so 2 × kvHeads × 160 reproduces the
+  //     correct per-token KV bytes — same convention as V2.5 Pro.
+  //   - sliding_window 128. max_position_embeddings 1048576 → 1024K context.
+  //   - 384 routed experts + 0 shared (n_shared_experts=null),
+  //     num_experts_per_tok=8, moe_intermediate_size=2048.
+  //   - Wrapper config has vision_config + audio_config → VLM + audio in.
+  //   - Ships natively FP8 (quantization_config fmt=e4m3, MXFP4 experts).
+  // Total safetensors ~1.02T (matches the model card "1.02T total / 42B
+  // activated parameters"). MIT license, agentic/thinking flagship.
+  "mimo-v2.6-pro-mopd": {
+    displayName: "MiMo V2.6-Pro-MOPD 1T-A42B (MoE, hybrid)",
+    brand: "Xiaomi",
+    hfRepoId: "XiaomiMiMo/MiMo-V2.6-Pro-MOPD",
+    params: 1.02e12,
+    activeParams: 42e9,
+    layers: 70,
+    kvHeads: 8,
+    headDim: 160, // average of QK head_dim 192 and v_head_dim 128
+    kvFormula: "hybrid",
+    fullLayers: 10,
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  // MiMo V2.6-Flash-MOPD (model_type mimo_v2): mid-scale sibling of V2.6-Pro-
+  // MOPD, published 2026-09-27. Same mimo_v2 hybrid SWA + full stack. Text-
+  // config verified against config.json on Hugging Face:
+  //   - num_hidden_layers 48. hybrid_layer_pattern zeros (full attention) at
+  //     indices 0, 5, 11, 17, 23, 29, 35, 41, 47 → 9 GA + 39 SWA layers.
+  //   - SWA layers: swa_num_key_value_heads=8. Full layers:
+  //     num_key_value_heads=4 (different from SWA!) — so encode SWA on the
+  //     base kvHeads slot and full on fullKvHeads, same convention as Gemma 4
+  //     12B's asymmetric SWA vs full KV split.
+  //   - QK head_dim 192 and v_head_dim 128 on both SWA and GA. Encoded as
+  //     headDim=fullHeadDim=160 = average(192, 128).
+  //   - sliding_window 128. max_position_embeddings 1048576 → 1024K context.
+  //   - 256 routed experts + 0 shared, num_experts_per_tok=8,
+  //     moe_intermediate_size=2048.
+  //   - Wrapper config has vision_config + audio_config → VLM + audio in.
+  //   - Ships natively FP8 (quantization_config fmt=e4m3, MXFP4 experts).
+  // Total safetensors ~311B; the model card advertises "309B total / 15B
+  // activated parameters". MIT license, agentic/thinking mid-scale flagship.
+  "mimo-v2.6-flash-mopd": {
+    displayName: "MiMo V2.6-Flash-MOPD 309B-A15B (MoE, hybrid)",
+    brand: "Xiaomi",
+    hfRepoId: "XiaomiMiMo/MiMo-V2.6-Flash-MOPD",
+    params: 309e9,
+    activeParams: 15e9,
+    layers: 48,
+    kvHeads: 8, // SWA layers: swa_num_key_value_heads
+    headDim: 160, // average of QK head_dim 192 and v_head_dim 128
+    kvFormula: "hybrid",
+    fullLayers: 9,
+    fullKvHeads: 4, // full-attn layers: num_key_value_heads
+    fullHeadDim: 160,
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── LG AI Research — EXAONE 4.5 (hybrid SWA + global, VLM) ────────────
   // EXAONE 4.5 33B (model_type exaone4_5): dense multimodal model wrapping
   // an Exaone4ForCausalLM text core inside an Exaone4_5_ForConditionalGeneration
@@ -1952,6 +2022,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   // New in the 2026-09-21 refresh
   "glm-5.3": "2026-08-25",
   "deepseek-v4.1-flash": "2026-09-10",
+  // New in the 2026-09-28 refresh
+  "mimo-v2.6-pro-mopd": "2026-09-27",
+  "mimo-v2.6-flash-mopd": "2026-09-27",
 };
 
 /**
@@ -2100,6 +2173,11 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "glm-5.3": "zai-org/GLM-5.3",
   // DeepSeek V4.1-Flash ships natively FP8 (quant_method=fp8, expert_dtype=fp4).
   "deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash",
+  // New in the 2026-09-28 refresh
+  // Both MiMo V2.6 MOPD checkpoints ship natively FP8 (quant_method=fp8,
+  // fmt=e4m3, MXFP4 experts), so the FP8 quant option points at the main repo.
+  "mimo-v2.6-pro-mopd": "XiaomiMiMo/MiMo-V2.6-Pro-MOPD",
+  "mimo-v2.6-flash-mopd": "XiaomiMiMo/MiMo-V2.6-Flash-MOPD",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
