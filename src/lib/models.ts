@@ -1644,6 +1644,74 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // MiMo V2.6 Pro (model_type mimo_v2, MiMoV2ForCausalLM): Xiaomi's flagship
+  // omnimodal successor to V2.5 Pro. Same mimo_v2 hybrid-SWA MoE backbone with
+  // the omni encoder stack (vision + audio) added — text + image + video +
+  // audio input. Architecture verified against config.json and the model
+  // card's architecture table:
+  //   - 70 layers → 10 global full-attention + 60 SWA (hybrid_layer_pattern
+  //     has 10 zeros + 60 ones). Both SWA and GA layers use the same
+  //     num_key_value_heads=8 and head_dim 192/128 → hybrid, fullLayers=10,
+  //     slidingWindow=128 (unchanged from V2.5 Pro).
+  //   - 384 routed experts, 8 active per token, no shared expert
+  //     (n_shared_experts=null), first MoE layer dense (moe_layer_freq[0]=0).
+  //   - QK head_dim=192, v_head_dim=128 — same asymmetric K/V dims as V2.5 Pro,
+  //     so we encode headDim as the average (160) to reproduce per-token KV
+  //     bytes under the standard 2×kvHeads×headDim formula.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - vision_config + audio_config present → full omnimodal (VLM + audio).
+  // Total 1.02T / active 42B per the model card. MIT license.
+  "mimo-v2.6-pro": {
+    displayName: "MiMo V2.6 Pro 1T-A42B (MoE, hybrid, omni)",
+    brand: "Xiaomi",
+    hfRepoId: "XiaomiMiMo/MiMo-V2.6-Pro-RL",
+    params: 1.02e12,
+    activeParams: 42e9,
+    layers: 70,
+    kvHeads: 8,
+    headDim: 160, // average of QK head_dim 192 and v_head_dim 128
+    kvFormula: "hybrid",
+    fullLayers: 10,
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  // MiMo V2.6 Flash (model_type mimo_v2, MiMoV2ForCausalLM): smaller sibling of
+  // MiMo V2.6 Pro — same mimo_v2 hybrid-SWA omnimodal recipe at a laptop/
+  // single-GPU scale. Architecture verified against config.json and the model
+  // card's architecture table:
+  //   - 48 layers → 9 global full-attention + 39 SWA (hybrid_layer_pattern has
+  //     9 zeros + 39 ones) → hybrid, fullLayers=9, slidingWindow=128.
+  //   - SWA layers: num_key_value_heads=8, head_dim 192/128 → kvHeads=8,
+  //     headDim=160 (same averaging convention as V2.5/V2.6 Pro).
+  //   - GA layers: 4 KV heads per the model card ("GA Heads (Q/KV) = 64/4"),
+  //     same 192/128 QK/V dims → fullKvHeads=4, fullHeadDim=160. Config's
+  //     top-level num_key_value_heads reports 4 (the GA count); the SWA
+  //     count comes from the model card.
+  //   - 256 routed experts, 8 active per token, no shared expert (first MoE
+  //     layer dense: moe_layer_freq[0]=0).
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - vision_config + audio_config present → full omnimodal (VLM + audio).
+  // Total 309B / active 15B per the model card. MIT license.
+  "mimo-v2.6-flash": {
+    displayName: "MiMo V2.6 Flash 309B-A15B (MoE, hybrid, omni)",
+    brand: "Xiaomi",
+    hfRepoId: "XiaomiMiMo/MiMo-V2.6-Flash-RL",
+    params: 309e9,
+    activeParams: 15e9,
+    layers: 48,
+    kvHeads: 8, // SWA layers: swa_num_key_value_heads per the model card
+    headDim: 160, // average of QK head_dim 192 and v_head_dim 128
+    kvFormula: "hybrid",
+    fullLayers: 9,
+    fullKvHeads: 4, // GA layers: ga_num_key_value_heads per the model card
+    fullHeadDim: 160,
+    slidingWindow: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── LG AI Research — EXAONE 4.5 (hybrid SWA + global, VLM) ────────────
   // EXAONE 4.5 33B (model_type exaone4_5): dense multimodal model wrapping
   // an Exaone4ForCausalLM text core inside an Exaone4_5_ForConditionalGeneration
@@ -1952,6 +2020,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   // New in the 2026-09-21 refresh
   "glm-5.3": "2026-08-25",
   "deepseek-v4.1-flash": "2026-09-10",
+  // New in the 2026-10-05 refresh
+  "mimo-v2.6-pro": "2026-09-21",
+  "mimo-v2.6-flash": "2026-09-21",
 };
 
 /**
