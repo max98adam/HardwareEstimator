@@ -398,6 +398,21 @@ export const HARDWARE_PRESETS: readonly HardwarePreset[] = [
     bandwidthGBs: 22000,
     memoryType: "HBM4",
   }),
+  // NVIDIA Rubin CPX: specialised single-die long-context inference GPU
+  // unveiled at AI Infra Summit 2026-09-09. Pairs 128 GB of GDDR7 (not HBM!)
+  // on a 512-bit bus for ~2 TB/s of per-GPU bandwidth, with 30 PFLOPS NVFP4
+  // dense compute. Deployed inside Vera Rubin NVL144 CPX racks (72 Rubin +
+  // 144 CPX dies). Positioned as a context-prefill companion to the HBM4
+  // Rubin R100 — complements, not replaces, R100. Shipping end of 2026.
+  gpuPreset({
+    id: "rubin-cpx",
+    category: "nvidia_datacenter",
+    label: "NVIDIA Rubin CPX 128GB (GDDR7)",
+    gpuInfo: "Rubin CPX 128GB",
+    vramGb: 128,
+    bandwidthGBs: 2000,
+    memoryType: "GDDR7",
+  }),
 
   // ── NVIDIA RTX PRO (Workstation) ──────────────────────────────────────
   // RTX PRO 6000 Blackwell family — all three editions share 96 GB GDDR7
