@@ -1773,6 +1773,35 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // Hunyuan Hy4-preview (model_type hy_v4): Tencent's next-generation Hunyuan
+  // flagship, a major architectural shift from Hy3 — moves to MLA latent
+  // attention (use_mla=true, kv_lora_rank=512, qk_rope_head_dim=64) with a
+  // DeepSeek-style sparse-attention indexer (index_topk=2048) on every layer.
+  // Modeled as `mla` since the DSA indexer only shrinks KV further at long
+  // context — same convention as DeepSeek V3.2, GLM-5.x and LongCat 2.0.
+  // Architecture verified against config.json on Hugging Face:
+  //   - num_hidden_layers 78, layer_types is 78 × deepseek_sparse_attention.
+  //   - kv_lora_rank 512, qk_rope_head_dim 64 (MLA latent).
+  //   - 256 routed experts + 1 shared (num_shared_experts=1), top-8.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - No vision_config → text-only.
+  // Total safetensors from HF API ≈780B; active ≈40B per the model card. Apache-2.0.
+  "hy4-preview": {
+    displayName: "Hunyuan Hy4-preview 780B-A40B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hy4-preview",
+    params: 780e9,
+    activeParams: 40e9,
+    layers: 78,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // Tencent Hunyuan A13B (model_type hunyuan_v1_moe): the popular smaller
   // Hunyuan MoE, backfilled for completeness. 32 layers, plain GQA
   // (kvHeads=8, headDim=128), 64 routed experts, top-8, 32K context.
@@ -1952,6 +1981,8 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   // New in the 2026-09-21 refresh
   "glm-5.3": "2026-08-25",
   "deepseek-v4.1-flash": "2026-09-10",
+  // New in the 2026-10-12 refresh
+  "hy4-preview": "2026-08-27",
 };
 
 /**
@@ -2100,6 +2131,8 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "glm-5.3": "zai-org/GLM-5.3",
   // DeepSeek V4.1-Flash ships natively FP8 (quant_method=fp8, expert_dtype=fp4).
   "deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash",
+  // New in the 2026-10-12 refresh
+  "hy4-preview": "tencent/Hy4-preview-FP8",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel

@@ -244,6 +244,7 @@ describe("HARDWARE_PRESETS — sample bandwidth numbers (datasheet sanity)", () 
     ["b200", "8000"],
     ["b300", "8000"],
     ["rubin-r100", "22000"],
+    ["rubin-cpx", "2000"],
     ["rtx-4090", "1008"],
     ["rtx-5090", "1792"],
     ["rtx-pro-6000-blackwell", "1792"],
