@@ -98,6 +98,9 @@ const LETTER_BRANDS: Partial<
   Tencent: { text: "T", bg: "#0052D9" },
   Sber: { text: "S", bg: "#21A038" },
   Meituan: { text: "Mt", bg: "#FFC300" },
+  LiquidAI: { text: "Lq", bg: "#00B8E7" },
+  Reflection: { text: "Re", bg: "#1F2937" },
+  AlephAlpha: { text: "Aα", bg: "#8B5CF6" },
 };
 
 export function BrandIcon({ brand, size = 14 }: BrandIconProps) {

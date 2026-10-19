@@ -25,6 +25,9 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Tencent", label: "Tencent Hunyuan" },
   { key: "Sber", label: "Sber GigaChat" },
   { key: "Meituan", label: "Meituan LongCat" },
+  { key: "LiquidAI", label: "Liquid AI LFM" },
+  { key: "Reflection", label: "Reflection AI" },
+  { key: "AlephAlpha", label: "Aleph Alpha" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -1615,6 +1618,34 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 128,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // Ling 3.1-flash (model_type bailing_hybrid): the 2026-10-13 successor to
+  // Ling 3.0-flash with ~4× the total parameters. Architecture verified
+  // against config.json: num_hidden_layers=72, layer_group_size=8 → 72/8 =
+  // 9 Gated MLA full-attention + 63 KDA linear-attention layers (the model
+  // card lists this split as "63 KDA + 9 Gated MLA (7:1)"). kv_lora_rank=512,
+  // qk_rope_head_dim=64, so the MLA latent is encoded as a single
+  // (kv_lora_rank + qk_rope = 576)-wide "head" with kvFactor=1 — same
+  // convention as Ling-flash / Ling-tiny / Kimi K3. 512 routed + 1 shared
+  // experts, num_experts_per_tok=8, first_k_dense_replace=4. 256K context
+  // (max_position_embeddings 262144; the model card advertises up to 1M via
+  // YaRN but we follow the config). Total 560B, active 25B per the model
+  // card. Ships natively FP8 (safetensors F8_E4M3). MIT license, text-only.
+  "ling-3.1-flash": {
+    displayName: "Ling 3.1-flash 560B-A25B (MoE, hybrid)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ling-3.1-flash",
+    params: 560e9,
+    activeParams: 25e9,
+    layers: 72,
+    kvHeads: 1,
+    headDim: 576, // MLA latent (kv_lora_rank 512 + qk_rope_head_dim 64)
+    kvFormula: "linear_hybrid",
+    fullLayers: 9,
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 256,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   // ── Xiaomi MiMo (hybrid SWA + Global, MoE, 1M context) ────────────
   // MiMo-V2.5-Pro: Xiaomi's flagship MoE (model_type `mimo_v2`). Hybrid
   // attention pattern: every 7th layer is full / global, the other 6 are
@@ -1818,6 +1849,28 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 32,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // Tencent Hy-Memory 30B-A3B (model_type hy_v3): a compact Hunyuan MoE
+  // tuned for long-context memory / agent tasks. Shares the hy_v3 family
+  // with the Hy3 flagship but with a laptop-friendly footprint. Architecture
+  // verified against config.json: num_hidden_layers=48, plain GQA
+  // (num_attention_heads=32, num_key_value_heads=4, head_dim=128), no sliding
+  // window, no MLA. 128 routed experts + 1 shared (first_k_dense_replace=1
+  // means the first layer is dense FFN, rest MoE), num_experts_per_tok=8.
+  // 256K context (max_position_embeddings 262144). Total safetensors ~30B;
+  // active ≈3B per the hy-memory product-page/model card. Text-only.
+  "hy-memory-30b-a3b": {
+    displayName: "Hunyuan Hy-Memory 30B-A3B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hy-Memory-30B-A3B",
+    params: 30e9,
+    activeParams: 3e9,
+    layers: 48,
+    kvHeads: 4,
+    headDim: 128,
+    moe: true,
+    maxContextK: 256,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
   // ── Sber GigaChat (MLA + Gated DeltaNet linear MoE) ───────────────
   // GigaChat 3.5 Ultra (model_type gigachat3_5): Sber's frontier open-weight
   // MoE. Hybrid attention: MLA (kv_lora_rank=512, qk_rope_head_dim=64) on
@@ -1870,6 +1923,115 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     moe: true,
     maxContextK: 256,
     capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  // ── Liquid AI LFM (hybrid conv + full-attention MoE) ──────────────
+  // LFM2.5-24B-A2B (model_type lfm2_moe, Lfm2MoeForCausalLM): Liquid AI's
+  // first open-weight MoE flagship. Architecture verified against config.json:
+  // num_hidden_layers=40 with layer_types = 10 full_attention + 30 "conv"
+  // (short-convolution linear-time attention). The conv layers do not grow
+  // the KV cache, so this is `linear_hybrid` with fullLayers=10. GQA on the
+  // full-attention layers: num_attention_heads=32, num_key_value_heads=8,
+  // head_dim = hidden_size/num_attention_heads = 2048/32 = 64. 64 routed
+  // experts, num_experts_per_tok=4, num_dense_layers=2 (first two MLP blocks
+  // are dense, rest MoE — affects FFN size, not KV). 131K context
+  // (max_position_embeddings 131072). Total safetensors ~24B; active ~2B
+  // per the model card. Apache-2.0.
+  "lfm2.5-24b-a2b": {
+    displayName: "Liquid LFM2.5 24B-A2B (MoE, hybrid)",
+    brand: "LiquidAI",
+    hfRepoId: "LiquidAI/LFM2.5-24B-A2B",
+    params: 24e9,
+    activeParams: 2e9,
+    layers: 40,
+    kvHeads: 8,
+    headDim: 64,
+    kvFormula: "linear_hybrid",
+    fullLayers: 10,
+    moe: true,
+    maxContextK: 128,
+    capabilities: { vlm: false, thinking: false, toolUse: true },
+  },
+  // ── Reflection AI Beam (hybrid SWA + full, MoE) ───────────────────
+  // Beam 1.0 (model_type beam): Reflection AI's first flagship open-weight
+  // MoE, released 2026-10-07. Architecture verified against config.json:
+  // num_hidden_layers=52 with layer_types = 9 full_attention + 43
+  // sliding_attention (every 6th layer is full, plus a final full at the end
+  // — 52 / 6 = 8 blocks + 1 trailing). GQA on both tiers:
+  // num_attention_heads=48, num_key_value_heads=8, head_dim=128.
+  // sliding_window=512. 256 routed experts, num_experts_per_tok=8. 1M
+  // context (max_position_embeddings 1048576). Total safetensors ~501B;
+  // active ~23B per the model card. Hybrid KV formula with no fold-folding
+  // between the two tiers (full layers share the same kvHeads/headDim).
+  "beam-1.0": {
+    displayName: "Reflection Beam 1.0 501B-A23B (MoE, hybrid)",
+    brand: "Reflection",
+    hfRepoId: "reflection/Beam-1.0-501B-A23B",
+    params: 501e9,
+    activeParams: 23e9,
+    layers: 52,
+    kvHeads: 8,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 9,
+    slidingWindow: 512,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  // ── Aleph Alpha Kolibri (sovereign EU MoE, SWA hybrid) ────────────
+  // Kolibri-1 (model_type kolibri1): Aleph Alpha's first flagship MoE,
+  // released 2026-10-02, focused on German + English with explicit reasoning
+  // mode. Architecture verified against config.json: num_hidden_layers=50
+  // with layer_types = 10 full_attention + 40 sliding_attention (every 5th
+  // layer is full). GQA (num_attention_heads=48, num_key_value_heads=4,
+  // head_dim=128). sliding_window=513. 384 routed experts,
+  // num_experts_per_tok=6. 1M context (max_position_embeddings 1048576).
+  // Total safetensors ~78B; active ~3.46B per the model card. Native FP8
+  // (float8_e4m3fn block-quantized). Apache-2.0.
+  "kolibri-1": {
+    displayName: "Aleph Alpha Kolibri-1 78B-A3.5B (MoE, hybrid)",
+    brand: "AlephAlpha",
+    hfRepoId: "Aleph-Alpha/Kolibri-1",
+    params: 78e9,
+    activeParams: 3.5e9,
+    layers: 50,
+    kvHeads: 4,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 10,
+    slidingWindow: 513,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  // ── NVIDIA Nemotron 3.5 Super-VL (Mamba-2 + MoE + Attention hybrid, VLM) ──
+  // Nemotron 3.5 Super-VL 120B-A12B (model_type nemotron_h, VLM wrapper
+  // nemotron_h_omni): NVIDIA's flagship 3.5-series VLM, 2026-10-12. The
+  // underlying language model is a hybrid stack of 88 blocks:
+  // layers_block_type counts give 40 mamba + 40 moe + 8 attention. Mamba-2
+  // layers have constant-size SSM state (not quadratic KV), so modelling
+  // only the 8 full-attention layers against context length is correct —
+  // this maps to `linear_hybrid` with fullLayers=8. Attention: head_dim=128,
+  // num_key_value_heads=2 (very tight GQA to fit 1M context). 512 routed
+  // experts + 1 shared; num_experts_per_tok=22 (unusually high; Nemotron 3.5
+  // uses a LatentMoE with a large top-k). 1M context
+  // (max_position_embeddings 1048576). Total safetensors ~124B; active
+  // ~12B per the Super-VL model card. OpenMDW-1.1 license, multimodal
+  // (image+video+text input, text output). Native BF16.
+  "nemotron-3.5-super-vl": {
+    displayName: "Nemotron 3.5 Super-VL 120B-A12B (MoE, hybrid)",
+    brand: "NVIDIA",
+    hfRepoId: "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-BF16",
+    params: 120e9,
+    activeParams: 12e9,
+    layers: 48, // 40 mamba + 8 attention — mamba layers hold constant SSM state, not standard KV
+    kvHeads: 2,
+    headDim: 128,
+    kvFormula: "linear_hybrid",
+    fullLayers: 8,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
   },
 };
 
@@ -1983,6 +2145,13 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "deepseek-v4.1-flash": "2026-09-10",
   // New in the 2026-10-12 refresh
   "hy4-preview": "2026-08-27",
+  // New in the 2026-10-19 refresh
+  "ling-3.1-flash": "2026-10-13",
+  "hy-memory-30b-a3b": "2026-10-15",
+  "lfm2.5-24b-a2b": "2026-10-12",
+  "beam-1.0": "2026-10-07",
+  "kolibri-1": "2026-10-02",
+  "nemotron-3.5-super-vl": "2026-10-12",
 };
 
 /**
@@ -2047,6 +2216,10 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   // New in the 2026-09-21 refresh
   "glm-5.3": "nvidia/GLM-5.3-NVFP4",
   "deepseek-v4.1-flash": "nvidia/DeepSeek-V4.1-Flash-NVFP4",
+  // New in the 2026-10-19 refresh
+  "ling-3.1-flash": "cbfight/Ling-3.1-flash-NVFP4-lossless8",
+  "beam-1.0": "reflection/Beam-1.0-501B-A23B-NVFP4",
+  "nemotron-3.5-super-vl": "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4",
 };
 
 /**
@@ -2133,6 +2306,14 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   "deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash",
   // New in the 2026-10-12 refresh
   "hy4-preview": "tencent/Hy4-preview-FP8",
+  // New in the 2026-10-19 refresh
+  // Ling-3.1-flash ships natively FP8 (safetensors F8_E4M3).
+  "ling-3.1-flash": "inclusionAI/Ling-3.1-flash",
+  "beam-1.0": "reflection/Beam-1.0-501B-A23B-FP8",
+  "lfm2.5-24b-a2b": "LiquidAI/LFM2.5-24B-A2B-FP8",
+  "hy-memory-30b-a3b": "tencent/Hy-Memory-30B-A3B-FP8",
+  // Kolibri ships natively FP8 (float8_e4m3fn 128×128-block quantized per the model card).
+  "kolibri-1": "Aleph-Alpha/Kolibri-1",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
