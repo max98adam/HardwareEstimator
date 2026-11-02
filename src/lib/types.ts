@@ -30,7 +30,8 @@ export type ModelBrand =
   | "ThinkingMachines"
   | "Tencent"
   | "Sber"
-  | "Meituan";
+  | "Meituan"
+  | "LiquidAI";
 
 /**
  * Architecture parameters of a model.

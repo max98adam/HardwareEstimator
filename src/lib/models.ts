@@ -25,6 +25,7 @@ export const MODEL_BRANDS: { key: ModelBrand; label: string }[] = [
   { key: "Tencent", label: "Tencent Hunyuan" },
   { key: "Sber", label: "Sber GigaChat" },
   { key: "Meituan", label: "Meituan LongCat" },
+  { key: "LiquidAI", label: "Liquid AI" },
 ];
 
 export const KNOWN_MODELS: Record<string, KnownModel> = {
@@ -678,6 +679,45 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256, // max_position_embeddings 262144 / 1024
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // Mistral Large 4 (model_type mistral_large4, MistralLarge4ForConditionalGeneration):
+  // Mistral's frontier MLA MoE — a successor to Mistral Large 3 that adopts
+  // DeepSeek-style sparse attention (DSA, index_topk=2048) on top of MLA latent
+  // attention. Same MLA cache layout as DeepSeek V3.2 / GLM-5.x / Hy4-preview,
+  // so we model it as `mla` (a safe upper bound — the DSA indexer only shrinks
+  // KV further at long context). Architecture verified against text_config.json
+  // and params.json on Hugging Face:
+  //   - n_layers 72 (params.json), num_hidden_layers 72 (text_config).
+  //   - kv_lora_rank 512, qk_rope_head_dim 64 (MLA latent).
+  //   - 128 routed experts + 1 shared, num_experts_per_tok 4,
+  //     first_k_dense_replace 1.
+  //   - max_position_embeddings 1048576 → 1024K context (YaRN factor 2048 over
+  //     an original_max_position_embeddings 512 base).
+  //   - vision_encoder (Pixtral-style, 30 layers) → VLM (image + text in).
+  //   - Ships natively FP8 (quantization_config quant_method=fp8,
+  //     params.json qformat_weight=fp8_e4m3).
+  //   - Also uses a KV-sharing scheme: 9 of 72 layers reuse an earlier layer's
+  //     KV (groups of 4 share after layer 35). Treated as an upper bound since
+  //     our MLA formula counts all layers — same convention as the DSA note.
+  // Total 1T per the model card and repo name (safetensors metadata hidden
+  // behind FP8 packing is incomplete via HF API); active ≈52B per token
+  // (49B without embedding/output layers). License: Mistral Ecosystem
+  // Open-Weight (modified MIT; MaaS requires a commercial license).
+  "mistral-large-4": {
+    displayName: "Mistral Large 4 1T-A52B (MoE)",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Mistral-Large-4-1T-A52B",
+    params: 1e12,
+    activeParams: 52e9,
+    layers: 72,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: false, toolUse: true },
+  },
   // Leanstral 1.5 (Mistral, Apache-2.0): a lean 119B-A6B MLA-MoE VLM built on
   // top of the Leanstral-2603 base. Same MLA cache layout as Mistral Small 4
   // (kv_lora_rank=256, qk_rope_head_dim=64) but Apache-2.0 licensed and
@@ -955,7 +995,12 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
   // hybrid attention family but with a refined "CSA2" scheme
   // (Full/Reindex/Reuse modes) plus FP4-native KV caching that shrinks the
   // global KV footprint to ~890 bytes/token (~¼ of V4-Flash-0731 per the model
-  // card). Text-config verified against config.json on Hugging Face:
+  // card). Updated 2026-11 to the dated V4.1-Flash-1017 release — the model
+  // card calls it "a minor update" with better reasoning / coding / agentic
+  // scores; architecture is unchanged (compress_ratios still 20 full + 18
+  // compressed + 2 special), only the expert layout grew (n_routed_experts
+  // 288→384, num_experts_per_tok 8→6) and the safetensors total moved from
+  // 552B to 763B (bf16-equivalent). Text-config verified against config.json:
   //   - text_config.num_hidden_layers 40. compress_ratios array assigns each
   //     of the 40 hidden layers to 0 (special, e.g. dspark/engram: 2 layers),
   //     1 (uncompressed / full attention: 20 layers) or 2 (2× compressed: 18
@@ -968,14 +1013,15 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
   //   - max_position_embeddings 1048576 → 1024K context.
   //   - Ships natively FP8 (activations, non-expert weights) with FP4 experts
   //     (quantization_config quant_method=fp8, expert_dtype=fp4).
-  // Total ≈552B backbone params per the model card; active is 16B during
-  // decode (8B during prefill) — we use the decode-time figure since inference
-  // is decode-heavy. MIT license.
+  // Total 763B from safetensors; active is 16B during decode (8B during
+  // prefill) — we use the decode-time figure since inference is decode-heavy
+  // (the -1017 card does not restate activation count; the V4.1-Flash card it
+  // calls a "minor update" from gives 16B). MIT license.
   "deepseek-v4.1-flash": {
-    displayName: "DeepSeek V4.1-Flash 552B-A16B (MoE)",
+    displayName: "DeepSeek V4.1-Flash 763B-A16B (MoE)",
     brand: "DeepSeek",
-    hfRepoId: "deepseek-ai/DeepSeek-V4.1-Flash",
-    params: 552e9,
+    hfRepoId: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    params: 763e9,
     activeParams: 16e9,
     layers: 40,
     kvHeads: 1,
@@ -1310,6 +1356,34 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     displayName: "MiniMax-M3 428B-A23B (MoE)",
     brand: "MiniMax",
     hfRepoId: "MiniMaxAI/MiniMax-M3",
+    params: 428e9,
+    activeParams: 23e9,
+    layers: 60,
+    kvHeads: 4,
+    headDim: 128,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  // MiniMax-M3.1-Flash (model_type minimax_m3_vl, MiniMaxM3SparseForConditional
+  // Generation): efficiency-focused refresh of MiniMax-M3 — same 428B-A23B MoE
+  // size and 60-layer backbone, but extends MSA sparse attention across every
+  // layer (M3 keeps the first 3 layers dense), adds quantization-aware training,
+  // and ships with a DSpark speculative-decoding draft head. Same approximation
+  // family as M3: block-sparse top-k KV doesn't match any of our four formulas
+  // exactly, so we model it as `standard` GQA (full KV at every layer) as a safe
+  // upper bound. Architecture verified against text_config.json on Hugging Face:
+  //   - num_hidden_layers 60.
+  //   - num_key_value_heads 4, head_dim 128.
+  //   - 128 routed experts + 1 shared, num_experts_per_tok 4.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - vision_config → multimodal (text + image + video in, text out).
+  // Total 428B / active 23B per the model card. License: minimax-community
+  // (custom; permissive for most uses, see repo LICENSE).
+  "minimax-m3.1-flash": {
+    displayName: "MiniMax-M3.1-Flash 428B-A23B (MoE)",
+    brand: "MiniMax",
+    hfRepoId: "MiniMaxAI/MiniMax-M3.1-Flash",
     params: 428e9,
     activeParams: 23e9,
     layers: 60,
@@ -1871,6 +1945,38 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: false, thinking: true, toolUse: true },
   },
+  // ── Liquid AI — LFM3 (dense, conv + full + sliding hybrid) ────────────
+  // LFM3-1.7B (model_type lfm3): Liquid AI's edge-focused dense model —
+  // alternates convolution layers (fixed-size recurrent state, ≈0 KV cache)
+  // with full-attention and tiny sliding-window-attention blocks. Architecture
+  // verified against config.json on Hugging Face:
+  //   - num_hidden_layers 24. layer_types is 12 × conv + 6 × full_attention + 6
+  //     × sliding_attention (sliding_window=256), repeating a
+  //     "conv, conv, full, conv, sliding, conv, …" block.
+  //   - num_key_value_heads 4, head_dim 128 (on the attention layers).
+  //   - max_position_embeddings 262144 → 256K context.
+  //   - Dense (no MoE). Trained in bf16.
+  // Modelled as `linear_hybrid`: only the 6 full-attention layers carry a KV
+  // cache that grows with T; the 12 conv layers behave like linear attention
+  // (fixed-size state, ≈0) and the 6 sliding layers have a tight 256-token
+  // window that stays negligible at long context — same convention as how
+  // Nemotron-H's selective-attention blocks are counted. License: lfm1.0
+  // (open-weight, commercial use requires separate licensing above a scale
+  // threshold).
+  "lfm3-1.7b": {
+    displayName: "LFM3 1.7B",
+    brand: "LiquidAI",
+    hfRepoId: "LiquidAI/LFM3-1.7B",
+    params: 1.73e9, // safetensors total 1,728,801,536
+    layers: 24,
+    kvHeads: 4,
+    headDim: 128,
+    kvFormula: "linear_hybrid",
+    fullLayers: 6, // only the full_attention layers; conv ≈ linear, sliding ≈ 0 at W=256
+    moe: false,
+    maxContextK: 256, // max_position_embeddings 262144 / 1024
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
 };
 
 /**
@@ -1980,9 +2086,13 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "muse-glimmer-30b": "2026-08-09",
   // New in the 2026-09-21 refresh
   "glm-5.3": "2026-08-25",
-  "deepseek-v4.1-flash": "2026-09-10",
+  "deepseek-v4.1-flash": "2026-10-17", // updated to the dated V4.1-Flash-1017 release
   // New in the 2026-10-12 refresh
   "hy4-preview": "2026-08-27",
+  // New in the 2026-11-02 refresh
+  "mistral-large-4": "2026-10-29",
+  "minimax-m3.1-flash": "2026-10-17",
+  "lfm3-1.7b": "2026-10-23",
 };
 
 /**
@@ -2046,7 +2156,9 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-NVFP4",
   // New in the 2026-09-21 refresh
   "glm-5.3": "nvidia/GLM-5.3-NVFP4",
-  "deepseek-v4.1-flash": "nvidia/DeepSeek-V4.1-Flash-NVFP4",
+  // New in the 2026-11-02 refresh
+  "deepseek-v4.1-flash": "nvidia/DeepSeek-V4.1-Flash-1017-NVFP4",
+  "mistral-large-4": "mistralai/Mistral-Large-4-1T-A52B-NVFP4",
 };
 
 /**
@@ -2129,10 +2241,13 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   // New in the 2026-09-21 refresh
   // GLM-5.3 ships natively FP8 (quantization_config fmt=e4m3).
   "glm-5.3": "zai-org/GLM-5.3",
-  // DeepSeek V4.1-Flash ships natively FP8 (quant_method=fp8, expert_dtype=fp4).
-  "deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash",
+  // DeepSeek V4.1-Flash-1017 ships natively FP8 (quant_method=fp8, expert_dtype=fp4).
+  "deepseek-v4.1-flash": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
   // New in the 2026-10-12 refresh
   "hy4-preview": "tencent/Hy4-preview-FP8",
+  // New in the 2026-11-02 refresh
+  // Mistral Large 4 ships natively FP8 (quantization_config quant_method=fp8).
+  "mistral-large-4": "mistralai/Mistral-Large-4-1T-A52B",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
