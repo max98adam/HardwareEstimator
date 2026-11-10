@@ -645,6 +645,41 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 288, // params.json max_position_embeddings 294912 / 1024
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
+  // Mistral Large 4 (model_type mistral_large4, MistralLarge4ForConditionalGeneration):
+  // natively multimodal 1T-param MoE that moves to DeepSeek-style MLA latent
+  // attention plus a novel "indexed_attention" layer type (all 72 layers) with
+  // per-layer no_rope_layers switching RoPE off every 4th layer. Native MXFP4
+  // / FP8 training on 3,800 Grace Blackwell GPUs; the main repo ships NVFP4
+  // experts over FP8 linears, with a companion DSpark speculative-decoding
+  // draft head. Text-config verified against config.json on Hugging Face
+  // (under text_config):
+  //   - num_hidden_layers 72, hidden_size 6144, moe_intermediate_size 6144.
+  //   - n_routed_experts 128, num_experts_per_tok 4, n_shared_experts 1,
+  //     first_k_dense_replace 1.
+  //   - MLA: kv_lora_rank 512, qk_rope_head_dim 64 — modeled as `mla`
+  //     (kvHeads=0, headDim=0) matching Mistral Large 3 / Small 4. The
+  //     indexed_attention sparsity only shrinks the long-context KV footprint
+  //     further, so plain MLA is a safe upper bound.
+  //   - max_position_embeddings 1048576 → 1M context.
+  //   - vision_config present → VLM (text + image in, text out).
+  // Total 1T per the model card; active 49B compute-time (52B including
+  // embeddings + output layers). Mistral Ecosystem Open-Weight License.
+  "mistral-large-4": {
+    displayName: "Mistral Large 4 1T-A49B (MoE)",
+    brand: "Mistral",
+    hfRepoId: "mistralai/Mistral-Large-4-1T-A52B",
+    params: 1e12,
+    activeParams: 49e9,
+    layers: 72,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   "mistral-small-4": {
     // mistral4 text core (kv_lora_rank=256, qk_rope_head_dim=64) inside a
     // Mistral3ForConditionalGeneration VLM wrapper. 36 layers, 128 experts /
@@ -974,7 +1009,10 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
   "deepseek-v4.1-flash": {
     displayName: "DeepSeek V4.1-Flash 552B-A16B (MoE)",
     brand: "DeepSeek",
-    hfRepoId: "deepseek-ai/DeepSeek-V4.1-Flash",
+    // Points at the 2026-10-17 dated official checkpoint, mirroring the
+    // -0731 / -0813 pattern used for V4-Flash / V4-Pro. Same architecture
+    // as the earlier un-dated DeepSeek-V4.1-Flash staging repo.
+    hfRepoId: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
     params: 552e9,
     activeParams: 16e9,
     layers: 40,
@@ -1118,6 +1156,40 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     headDim: 576, // kv_lora_rank 512 + qk_rope_head_dim 64 (MLA latent)
     kvFormula: "linear_hybrid",
     fullLayers: 24, // MLA full-attention layers; 69 KDA linear layers ≈ 0 KV
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  // Kimi K3.1-Pro (top-level model_type kimi_k31 wrapping a kimi_linear text
+  // core — same linear-hybrid family as Kimi K3 / Kimi-Linear). Flagship
+  // "Pro" refresh of Kimi K3 with the same 93-layer KDA+MLA core and expert
+  // layout, but trained for more reasoning (reasoning_effort = max by default)
+  // and tool-use plus a bumped MoonViT-V2 vision tower. Text-config verified
+  // against config.json on HuggingFace:
+  //   - num_hidden_layers 93, identical linear_attn_config: full_attn_layers
+  //     lists 24 indices [4, 8, 12, …, 92, 93] → fullLayers=24.
+  //   - MLA latent: kv_lora_rank 512, qk_rope_head_dim 64 → the per-layer KV
+  //     is encoded as a single wide "head" (kvHeads=1, headDim=576, kvFactor=1)
+  //     exactly like Kimi K3.
+  //   - 896 routed experts + 2 shared, num_experts_per_tok 16, moe_
+  //     intermediate_size 3072, first_k_dense_replace 1.
+  //   - vision_config present (27-layer MoonViT-V2) → VLM.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - Ships natively MXFP4 (compressed-tensors, mxfp4-pack-quantized).
+  // Total params from safetensors: 2.78T (same as K3). Active ≈104B per the
+  // model card (dense layer + 16 routed + 2 shared across the 92 MoE layers).
+  "kimi-k3.1-pro": {
+    displayName: "Kimi K3.1 Pro 2.78T-A104B (MoE, hybrid)",
+    brand: "Moonshot",
+    hfRepoId: "moonshotai/Kimi-K3.1-Pro",
+    params: 2.78e12,
+    activeParams: 104e9,
+    layers: 93,
+    kvHeads: 1,
+    headDim: 576, // kv_lora_rank 512 + qk_rope_head_dim 64 (MLA latent)
+    kvFormula: "linear_hybrid",
+    fullLayers: 24, // same pattern as Kimi K3: 24 MLA full-attention layers
     kvFactor: 1,
     moe: true,
     maxContextK: 1024, // max_position_embeddings 1048576 / 1024
@@ -1589,6 +1661,39 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 256,
     capabilities: { vlm: false, thinking: false, toolUse: true },
   },
+  // Ling 3.1-flash (model_type bailing_hybrid, BailingMoeV3ForCausalLM):
+  // successor to Ling 3.0-flash — larger total/active params and a 4×
+  // longer 1M context, same KDA+MLA linear-hybrid recipe. Architecture
+  // verified against config.json on HuggingFace:
+  //   - num_hidden_layers 72, layer_group_size 8 → 72/8 = 9 MLA full-
+  //     attention + 63 KDA linear → fullLayers=9.
+  //   - MLA: kv_lora_rank 512, q_lora_rank 1536, qk_rope_head_dim 64 →
+  //     latent encoded as a single (kv_lora_rank + qk_rope = 576)-wide
+  //     head with kvFactor=1, mirroring Ling 3.0-flash / Kimi K3.
+  //   - 512 routed experts + 1 shared, num_experts_per_tok 8, moe_
+  //     intermediate_size 1280, first_k_dense_replace 4.
+  //   - max_position_embeddings 1048576 → 1M context (per model card;
+  //     config exposes 256K before YaRN).
+  //   - No vision_config → text-only. Native hybrid reasoning (enable_
+  //     thinking toggle), vLLM auto-tool-call parser.
+  // Total ≈572B (model card lists 560B, safetensors metadata 572B —
+  // using the safetensors figure); active ≈25B per the model card.
+  "ling-3.1-flash": {
+    displayName: "Ling 3.1-flash 572B-A25B (MoE, hybrid)",
+    brand: "InclusionAI",
+    hfRepoId: "inclusionAI/Ling-3.1-flash",
+    params: 572e9,
+    activeParams: 25e9,
+    layers: 72,
+    kvHeads: 1,
+    headDim: 576, // MLA latent (kv_lora_rank 512 + qk_rope_head_dim 64)
+    kvFormula: "linear_hybrid",
+    fullLayers: 9, // 72 layers / layer_group_size 8 = 9 MLA full-attention layers
+    kvFactor: 1,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
   "ling-3.0-tiny": {
     // Smallest member of the Ling 3.0 family (model_type bailing_hybrid). Same
     // MLA-full + KDA-linear hybrid recipe as Ling 3.0-flash, just at a much
@@ -1980,9 +2085,13 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "muse-glimmer-30b": "2026-08-09",
   // New in the 2026-09-21 refresh
   "glm-5.3": "2026-08-25",
-  "deepseek-v4.1-flash": "2026-09-10",
+  "deepseek-v4.1-flash": "2026-10-17", // dated DeepSeek-V4.1-Flash-1017 checkpoint
   // New in the 2026-10-12 refresh
   "hy4-preview": "2026-08-27",
+  // New in the 2026-11-09 refresh
+  "mistral-large-4": "2026-09-30",
+  "kimi-k3.1-pro": "2026-11-02",
+  "ling-3.1-flash": "2026-10-13",
 };
 
 /**
@@ -2046,7 +2155,9 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "muse-glimmer-30b": "RedHatAI/Muse-Glimmer-30B-NVFP4",
   // New in the 2026-09-21 refresh
   "glm-5.3": "nvidia/GLM-5.3-NVFP4",
-  "deepseek-v4.1-flash": "nvidia/DeepSeek-V4.1-Flash-NVFP4",
+  "deepseek-v4.1-flash": "nvidia/DeepSeek-V4.1-Flash-1017-NVFP4",
+  // New in the 2026-11-09 refresh
+  "mistral-large-4": "mistralai/Mistral-Large-4-1T-A52B-NVFP4",
 };
 
 /**
