@@ -646,41 +646,6 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 288, // params.json max_position_embeddings 294912 / 1024
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
-  // Mistral Large 4 (model_type mistral_large4, MistralLarge4ForConditionalGeneration):
-  // natively multimodal 1T-param MoE that moves to DeepSeek-style MLA latent
-  // attention plus a novel "indexed_attention" layer type (all 72 layers) with
-  // per-layer no_rope_layers switching RoPE off every 4th layer. Native MXFP4
-  // / FP8 training on 3,800 Grace Blackwell GPUs; the main repo ships NVFP4
-  // experts over FP8 linears, with a companion DSpark speculative-decoding
-  // draft head. Text-config verified against config.json on Hugging Face
-  // (under text_config):
-  //   - num_hidden_layers 72, hidden_size 6144, moe_intermediate_size 6144.
-  //   - n_routed_experts 128, num_experts_per_tok 4, n_shared_experts 1,
-  //     first_k_dense_replace 1.
-  //   - MLA: kv_lora_rank 512, qk_rope_head_dim 64 — modeled as `mla`
-  //     (kvHeads=0, headDim=0) matching Mistral Large 3 / Small 4. The
-  //     indexed_attention sparsity only shrinks the long-context KV footprint
-  //     further, so plain MLA is a safe upper bound.
-  //   - max_position_embeddings 1048576 → 1M context.
-  //   - vision_config present → VLM (text + image in, text out).
-  // Total 1T per the model card; active 49B compute-time (52B including
-  // embeddings + output layers). Mistral Ecosystem Open-Weight License.
-  "mistral-large-4": {
-    displayName: "Mistral Large 4 1T-A49B (MoE)",
-    brand: "Mistral",
-    hfRepoId: "mistralai/Mistral-Large-4-1T-A52B",
-    params: 1e12,
-    activeParams: 49e9,
-    layers: 72,
-    kvHeads: 0,
-    headDim: 0,
-    kvFormula: "mla",
-    kvLoraRank: 512,
-    qkRopeHeadDim: 64,
-    moe: true,
-    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
-    capabilities: { vlm: true, thinking: true, toolUse: true },
-  },
   "mistral-small-4": {
     // mistral4 text core (kv_lora_rank=256, qk_rope_head_dim=64) inside a
     // Mistral3ForConditionalGeneration VLM wrapper. 36 layers, 128 experts /
@@ -1933,6 +1898,38 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // Inkling 2 Small (model_type inkling2, Inkling2ForConditionalGeneration):
+  // the next-generation Thinking Machines MoE — a larger sibling of Inkling
+  // Small that drops shared experts for a wider routed-expert pool and ships
+  // natively NVFP4. Text-config verified against config.json on Hugging Face:
+  //   - num_hidden_layers 48. local_layer_ids lists 40 SWA layers; the 8
+  //     remaining indices [5, 11, 17, 23, 29, 35, 41, 47] are global full-
+  //     attention (every 6th layer) → hybrid, fullLayers=8.
+  //   - SWA (`swa_num_key_value_heads`=8, `swa_head_dim`=128, `sliding_window
+  //     _size`=1024) and global (`num_key_value_heads`=8, `head_dim`=128)
+  //     share KV dims, so no separate fullKvHeads/fullHeadDim needed.
+  //   - 384 routed experts + 0 shared, num_experts_per_tok=8 (Inkling 1 had
+  //     256 routed + 2 shared).
+  //   - model_max_length 1048576 → 1024K context.
+  //   - vision_config (23 layers) → VLM (image + text in).
+  //   - Native NVFP4 (quantization_config quant_algo=NVFP4, modelopt).
+  // Total 594B / active 17B per the model card. Apache-2.0.
+  "inkling-2-small": {
+    displayName: "Inkling 2 Small 594B-A17B (MoE, hybrid)",
+    brand: "ThinkingMachines",
+    hfRepoId: "thinkingmachines/Inkling-2-Small",
+    params: 594e9,
+    activeParams: 17e9,
+    layers: 48,
+    kvHeads: 8,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 8,
+    slidingWindow: 1024,
+    moe: true,
+    maxContextK: 1024, // model_max_length 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Tencent Hunyuan (standard GQA MoE) ────────────────────────────
   // Tencent Hunyuan Hy3 (model_type hy_v3): 80 layers of plain GQA
   // (kvHeads=8, headDim=128), 192 routed experts + 1 shared, 8 active per
@@ -2049,6 +2046,38 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     moe: true,
     maxContextK: 256,
     capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  // LongCat 2.5 (model_type pro_v, LongcatCausalLM inside a visual wrapper):
+  // multimodal successor to LongCat 2.0 — same MLA + sparse-attention indexer
+  // core, extended context, and a Pro-V vision encoder. Modelled as `mla` for
+  // the same reason as LongCat 2.0 (a safe upper bound — the DSA indexer only
+  // shrinks KV further at long context). Architecture verified against
+  // config.json on Hugging Face:
+  //   - num_layers 38 (unchanged).
+  //   - MLA latent: kv_lora_rank 512, qk_rope_head_dim 64, v_head_dim 128,
+  //     qk_nope_head_dim 128 (same as 2.0).
+  //   - 768 routed experts, moe_topk 12 (same as 2.0); attention_method=MLA,
+  //     use_mla=1, index_topk 2048 (DSA indexer).
+  //   - max_position_embeddings 524288 → 512K (doubled from LongCat 2.0's
+  //     256K).
+  //   - visual_config present → multimodal (image-text-to-text).
+  // Total params from safetensors ≈1.78T (same expert layout as 2.0); active
+  // ≈48B per the model card (unchanged MoE compute). MIT license.
+  "longcat-2.5": {
+    displayName: "LongCat 2.5 1.78T-A48B (MoE)",
+    brand: "Meituan",
+    hfRepoId: "meituan-longcat/LongCat-2.5",
+    params: 1.78e12,
+    activeParams: 48e9,
+    layers: 38,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 512, // max_position_embeddings 524288 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
   },
   // ── Liquid AI — LFM3 (dense, conv + full + sliding hybrid) ────────────
   // LFM3-1.7B (model_type lfm3): Liquid AI's edge-focused dense model —
@@ -2198,6 +2227,9 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mistral-large-4": "2026-09-30",
   "kimi-k3.1-pro": "2026-11-02",
   "ling-3.1-flash": "2026-10-13",
+  // New in the 2026-11-16 refresh
+  "inkling-2-small": "2026-11-04",
+  "longcat-2.5": "2026-11-04",
 };
 
 /**
@@ -2264,6 +2296,8 @@ export const MODEL_NVFP4_REPOS: Record<string, string> = {
   "deepseek-v4.1-flash": "nvidia/DeepSeek-V4.1-Flash-1017-NVFP4",
   // New in the 2026-11-09 refresh
   "mistral-large-4": "mistralai/Mistral-Large-4-1T-A52B-NVFP4",
+  // New in the 2026-11-16 refresh
+  "kimi-k3.1-pro": "nvidia/Kimi-K3.1-Pro-NVFP4",
 };
 
 /**
