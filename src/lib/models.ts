@@ -646,41 +646,6 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 288, // params.json max_position_embeddings 294912 / 1024
     capabilities: { vlm: true, thinking: false, toolUse: true },
   },
-  // Mistral Large 4 (model_type mistral_large4, MistralLarge4ForConditionalGeneration):
-  // natively multimodal 1T-param MoE that moves to DeepSeek-style MLA latent
-  // attention plus a novel "indexed_attention" layer type (all 72 layers) with
-  // per-layer no_rope_layers switching RoPE off every 4th layer. Native MXFP4
-  // / FP8 training on 3,800 Grace Blackwell GPUs; the main repo ships NVFP4
-  // experts over FP8 linears, with a companion DSpark speculative-decoding
-  // draft head. Text-config verified against config.json on Hugging Face
-  // (under text_config):
-  //   - num_hidden_layers 72, hidden_size 6144, moe_intermediate_size 6144.
-  //   - n_routed_experts 128, num_experts_per_tok 4, n_shared_experts 1,
-  //     first_k_dense_replace 1.
-  //   - MLA: kv_lora_rank 512, qk_rope_head_dim 64 — modeled as `mla`
-  //     (kvHeads=0, headDim=0) matching Mistral Large 3 / Small 4. The
-  //     indexed_attention sparsity only shrinks the long-context KV footprint
-  //     further, so plain MLA is a safe upper bound.
-  //   - max_position_embeddings 1048576 → 1M context.
-  //   - vision_config present → VLM (text + image in, text out).
-  // Total 1T per the model card; active 49B compute-time (52B including
-  // embeddings + output layers). Mistral Ecosystem Open-Weight License.
-  "mistral-large-4": {
-    displayName: "Mistral Large 4 1T-A49B (MoE)",
-    brand: "Mistral",
-    hfRepoId: "mistralai/Mistral-Large-4-1T-A52B",
-    params: 1e12,
-    activeParams: 49e9,
-    layers: 72,
-    kvHeads: 0,
-    headDim: 0,
-    kvFormula: "mla",
-    kvLoraRank: 512,
-    qkRopeHeadDim: 64,
-    moe: true,
-    maxContextK: 1024, // max_position_embeddings 1048576 / 1024
-    capabilities: { vlm: true, thinking: true, toolUse: true },
-  },
   "mistral-small-4": {
     // mistral4 text core (kv_lora_rank=256, qk_rope_head_dim=64) inside a
     // Mistral3ForConditionalGeneration VLM wrapper. 36 layers, 128 experts /
@@ -1059,7 +1024,7 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     // -0731 / -0813 pattern used for V4-Flash / V4-Pro. Same architecture
     // as the earlier un-dated DeepSeek-V4.1-Flash staging repo.
     hfRepoId: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
-    params: 552e9,
+    params: 763e9,
     activeParams: 16e9,
     layers: 40,
     kvHeads: 1,
@@ -1933,6 +1898,74 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     maxContextK: 1024,
     capabilities: { vlm: true, thinking: true, toolUse: true },
   },
+  // Inkling 2 Small (model_type inkling2, Inkling2ForConditionalGeneration):
+  // the big sibling of Inkling-2-Mini and the direct successor to Inkling Small
+  // — scales the Inkling MoE recipe up to 48 layers / 384 routed experts while
+  // keeping the hybrid SWA + global attention pattern. Unlike the original
+  // Inkling / Inkling Small, SWA and full layers share KV dims (both kvHeads=8,
+  // headDim=128), so no separate fullKvHeads/fullHeadDim are needed. Text-config
+  // verified against config.json on Hugging Face:
+  //   - num_hidden_layers 48. local_layer_ids lists 40 SWA layers; the 8
+  //     remaining are global full-attention (indices 5, 11, 17, 23, 29, 35, 41,
+  //     47 — an every-6th-layer pattern) → hybrid, fullLayers=8.
+  //   - swa_num_key_value_heads=8 == num_key_value_heads=8, swa_head_dim=128 ==
+  //     head_dim=128. sliding_window_size=1024.
+  //   - 384 routed experts + 0 shared, num_experts_per_tok=8.
+  //   - model_max_length 1048576 → 1024K context.
+  //   - Wrapper config has vision_config → VLM (image + text in, text out).
+  // Total params from safetensors: ≈594B (bf16). Active 17B per the model
+  // card. Apache-2.0.
+  "inkling-2-small": {
+    displayName: "Inkling 2 Small 594B-A17B (MoE, hybrid)",
+    brand: "ThinkingMachines",
+    hfRepoId: "thinkingmachines/Inkling-2-Small",
+    params: 594e9,
+    activeParams: 17e9,
+    layers: 48,
+    kvHeads: 8,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 8,
+    slidingWindow: 1024,
+    moe: true,
+    maxContextK: 1024, // model_max_length 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
+  // Inkling 2 Mini (model_type inkling2_loop, Inkling2LoopForConditionalGeneration):
+  // a new "looped transformer" architecture from Thinking Machines — a 24-layer
+  // decoder-only MoE whose middle 12 layers (indices 6..17 per loop_config) run
+  // three times with shared weights, giving 48 layer applications per token from
+  // only 24 layers of stored weights. Same hybrid SWA + global attention family
+  // as Inkling 2 Small. Text-config verified against config.json:
+  //   - num_hidden_layers 24. local_layer_ids lists 20 SWA → 4 global full-
+  //     attention layers at indices 5, 11, 17, 23 → hybrid, fullLayers=4.
+  //   - swa_num_key_value_heads=8 == num_key_value_heads=8, swa_head_dim=128 ==
+  //     head_dim=128. sliding_window_size=1024.
+  //   - loop_config: core_start=6, core_end=18, num_passes=3 (universal-
+  //     transformer-style weight reuse). The loop does NOT change the KV cache
+  //     footprint — KV is still stored per unique layer index (24 layers total),
+  //     so we model this as plain `hybrid` on the 24 physical layers.
+  //   - 128 routed experts + 0 shared, num_experts_per_tok=8.
+  //   - model_max_length 1048576 → 1024K context.
+  //   - Wrapper config has vision_config → VLM (image + text in, text out).
+  // Total params from safetensors ≈26.4B. Active 3.4B base + 2B from two extra
+  // loop passes = 5.4B effective active per the model card. Apache-2.0.
+  "inkling-2-mini": {
+    displayName: "Inkling 2 Mini 26B-A5.4B (MoE, hybrid+loop)",
+    brand: "ThinkingMachines",
+    hfRepoId: "thinkingmachines/Inkling-2-Mini",
+    params: 26.4e9,
+    activeParams: 5.4e9,
+    layers: 24,
+    kvHeads: 8,
+    headDim: 128,
+    kvFormula: "hybrid",
+    fullLayers: 4,
+    slidingWindow: 1024,
+    moe: true,
+    maxContextK: 1024, // model_max_length 1048576 / 1024
+    capabilities: { vlm: true, thinking: true, toolUse: true },
+  },
   // ── Tencent Hunyuan (standard GQA MoE) ────────────────────────────
   // Tencent Hunyuan Hy3 (model_type hy_v3): 80 layers of plain GQA
   // (kvHeads=8, headDim=128), 192 routed experts + 1 shared, 8 active per
@@ -1980,6 +2013,39 @@ export const KNOWN_MODELS: Record<string, KnownModel> = {
     moe: true,
     maxContextK: 1024,
     capabilities: { vlm: false, thinking: true, toolUse: true },
+  },
+  // Hunyuan Hy4 (model_type hy_v4_vl, HYV4VLForConditionalGeneration): the
+  // finalized multimodal successor to Hy4-preview — same MLA + DeepSeek-style
+  // sparse-attention (DSA) core as the preview but now natively multimodal
+  // (vision_config present) and slightly refined (gated_mla=true). Same `mla`
+  // modeling as Hy4-preview / DeepSeek V3.2 / GLM-5.x: the DSA indexer only
+  // shrinks KV further at long context, so plain MLA is a safe upper bound.
+  // Architecture verified against config.json on Hugging Face:
+  //   - num_hidden_layers 78, layer_types is 78 × deepseek_sparse_attention.
+  //   - kv_lora_rank 512, qk_rope_head_dim 64 (MLA latent).
+  //   - 256 routed experts + 1 shared (n_shared_experts=1), num_experts_per_tok
+  //     8, moe_intermediate_size 2048, first_k_dense_replace 1.
+  //   - max_position_embeddings 1048576 → 1024K context.
+  //   - vision_config present → VLM (image + text in, text out).
+  // Total safetensors from HF API ≈774B (vs ~780B on the preview — the final
+  // release trimmed some embeddings); active ≈40B per the model card (same
+  // ratio as Hy4-preview). The sibling `tencent/Hy4-FP8` repo ships the same
+  // weights natively FP8 (F8_E4M3). Apache-2.0.
+  "hy4": {
+    displayName: "Hunyuan Hy4 774B-A40B (MoE)",
+    brand: "Tencent",
+    hfRepoId: "tencent/Hy4",
+    params: 774e9,
+    activeParams: 40e9,
+    layers: 78,
+    kvHeads: 0,
+    headDim: 0,
+    kvFormula: "mla",
+    kvLoraRank: 512,
+    qkRopeHeadDim: 64,
+    moe: true,
+    maxContextK: 1024,
+    capabilities: { vlm: true, thinking: true, toolUse: true },
   },
   // Tencent Hunyuan A13B (model_type hunyuan_v1_moe): the popular smaller
   // Hunyuan MoE, backfilled for completeness. 32 layers, plain GQA
@@ -2198,6 +2264,10 @@ export const MODEL_RELEASE_DATES: Record<string, string> = {
   "mistral-large-4": "2026-09-30",
   "kimi-k3.1-pro": "2026-11-02",
   "ling-3.1-flash": "2026-10-13",
+  // New in the 2026-11-23 refresh
+  "hy4": "2026-10-29",
+  "inkling-2-small": "2026-11-04",
+  "inkling-2-mini": "2026-11-17",
 };
 
 /**
@@ -2353,6 +2423,8 @@ export const MODEL_FP8_REPOS: Record<string, string> = {
   // New in the 2026-11-02 refresh
   // Mistral Large 4 ships natively FP8 (quantization_config quant_method=fp8).
   "mistral-large-4": "mistralai/Mistral-Large-4-1T-A52B",
+  // New in the 2026-11-23 refresh
+  "hy4": "tencent/Hy4-FP8",
 };
 
 // Enrich the catalog once at module load so every consumer of KnownModel
